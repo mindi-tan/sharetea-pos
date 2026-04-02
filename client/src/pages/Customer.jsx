@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
@@ -26,6 +27,19 @@ const categoryEmojis = {
   'Seasonal':    '🌸',
 };
 
+const assistantStarterMessages = [
+  {
+    role: 'assistant',
+    content: 'Hi, I can help with menu questions and ordering. Ask me about drinks, toppings, prices, or how to place an order.',
+  },
+];
+
+const assistantQuickPrompts = [
+  'What drinks do you have?',
+  'What toppings are available?',
+  'Help me place an order',
+];
+
 export default function Customer() {
   const [categories, setCategories]               = useState([]);
   const [drinks, setDrinks]                       = useState([]);
@@ -39,6 +53,12 @@ export default function Customer() {
   const [showCart, setShowCart]                 = useState(false);
   const [orderPlaced, setOrderPlaced]           = useState(false);
   const [placingOrder, setPlacingOrder]         = useState(false);
+  const [isBackHovered, setIsBackHovered]       = useState(false);
+  const [showAssistant, setShowAssistant]       = useState(false);
+  const [assistantMessages, setAssistantMessages] = useState(assistantStarterMessages);
+  const [assistantInput, setAssistantInput]     = useState('');
+  const [assistantLoading, setAssistantLoading] = useState(false);
+  const [assistantError, setAssistantError]     = useState('');
 
   useEffect(() => {
     const loadMenu = async () => {
@@ -170,10 +190,69 @@ export default function Customer() {
     ? 'All categories'
     : categories.find(c => c.category_id === selectedCategory)?.category_name || 'Selected category';
 
+  const sendAssistantMessage = async (prompt) => {
+    const messageText = (prompt ?? assistantInput).trim();
+
+    if (!messageText || assistantLoading) {
+      return;
+    }
+
+    const nextMessages = [...assistantMessages, { role: 'user', content: messageText }];
+    setAssistantMessages(nextMessages);
+    setAssistantInput('');
+    setAssistantLoading(true);
+    setAssistantError('');
+
+    try {
+      const response = await fetch(toApiUrl('/api/assistant/chat'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: nextMessages }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Assistant request failed');
+      }
+
+      const data = await response.json();
+
+      setAssistantMessages((currentMessages) => [
+        ...currentMessages,
+        { role: 'assistant', content: data.reply },
+      ]);
+    } catch (err) {
+      console.error(err);
+      setAssistantError('The assistant could not respond right now. Please try again.');
+    } finally {
+      setAssistantLoading(false);
+    }
+  };
+
   return (
     <div style={s.root}>
       <header style={s.header}>
-        <h1 style={s.logo}>🧋 Reveille Boba</h1>
+        <div style={s.headerLeft}>
+          <Link
+            to="/"
+            style={{ ...s.backBtn, ...(isBackHovered ? s.backBtnHover : {}) }}
+            aria-label="Go back to portal"
+            title="Back"
+            onMouseEnter={() => setIsBackHovered(true)}
+            onMouseLeave={() => setIsBackHovered(false)}
+          >
+            ⬅
+          </Link>
+          <h1 style={s.logo}>🧋 Reveille Boba</h1>
+          <button
+            type="button"
+            style={s.assistantToggle}
+            onClick={() => setShowAssistant(true)}
+            aria-label="Open chatbot assistant"
+            title="Open assistant"
+          >
+            ✦
+          </button>
+        </div>
         <div style={s.headerActions}>
           <button
             style={s.cartBtn}
@@ -342,6 +421,81 @@ export default function Customer() {
       {orderPlaced && (
         <div style={s.toast} role="status" aria-live="polite">✅ Order placed! Thank you!</div>
       )}
+
+      {showAssistant && (
+        <div style={s.assistantOverlay} onClick={() => setShowAssistant(false)}>
+          <div
+            style={s.assistantPopup}
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="assistant-title"
+          >
+            <div style={s.assistantHeader}>
+              <div>
+                <div style={s.assistantBadge}>Personal Assistant</div>
+                <h2 id="assistant-title" style={s.assistantTitle}>Reveille Boba Helper</h2>
+              </div>
+              <button type="button" style={s.assistantClose} onClick={() => setShowAssistant(false)} aria-label="Close assistant">
+                ✕
+              </button>
+            </div>
+
+            <p style={s.assistantDescription}>
+              Ask about menu items, toppings, pricing, or ordering steps. The assistant uses your live database menu data.
+            </p>
+
+            <div style={s.assistantQuickRow}>
+              {assistantQuickPrompts.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  style={s.assistantQuickButton}
+                  onClick={() => sendAssistantMessage(prompt)}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+
+            <div style={s.assistantChatWindow}>
+              {assistantMessages.map((message, index) => (
+                <div
+                  key={`${message.role}-${index}`}
+                  style={{
+                    ...s.assistantMessage,
+                    ...(message.role === 'assistant' ? s.assistantMessageBot : s.assistantMessageUser),
+                  }}
+                >
+                  {message.content}
+                </div>
+              ))}
+              {assistantLoading && <div style={{ ...s.assistantMessage, ...s.assistantMessageBot }}>Thinking...</div>}
+            </div>
+
+            {assistantError && <p style={s.assistantError}>{assistantError}</p>}
+
+            <form
+              style={s.assistantForm}
+              onSubmit={(event) => {
+                event.preventDefault();
+                sendAssistantMessage();
+              }}
+            >
+              <input
+                style={s.assistantInput}
+                type="text"
+                value={assistantInput}
+                onChange={(event) => setAssistantInput(event.target.value)}
+                placeholder="Ask something about the menu or ordering..."
+              />
+              <button style={s.assistantSendButton} type="submit" disabled={assistantLoading}>
+                Send
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -354,8 +508,12 @@ const LIGHT  = '#fff8f0';
 const s = {
   root:             { minHeight: '100vh', background: CREAM, fontFamily: "'Georgia', serif", color: BROWN },
   header:           { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1.2rem 2rem', background: BROWN, color: '#fff', position: 'sticky', top: 0, zIndex: 100 },
+  headerLeft:       { display: 'flex', alignItems: 'center', gap: '0.7rem' },
   headerActions:    { display: 'flex', alignItems: 'center', gap: '0.6rem' },
   logo:             { fontSize: '1.6rem', fontWeight: 'bold', letterSpacing: '0.05em', margin: 0 },
+  backBtn:          { background: '#fff', color: BROWN, borderRadius: '50%', width: '2.2rem', height: '2.2rem', textDecoration: 'none', fontSize: '1.35rem', fontWeight: 900, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, transition: 'transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease' },
+  backBtnHover:     { transform: 'translateY(-1px)', boxShadow: '0 3px 10px rgba(0,0,0,0.2)', background: '#f8efe4' },
+  assistantToggle:  { width: '2.2rem', height: '2.2rem', borderRadius: '50%', border: 'none', background: '#fff', color: BROWN, fontSize: '1.05rem', fontWeight: 900, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, boxShadow: '0 2px 6px rgba(0,0,0,0.12)' },
   visuallyHidden:   { position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 },
   statusMessage:    { margin: '1rem 2rem 0', color: BROWN, fontSize: '0.95rem' },
   errorMessage:     { margin: '1rem 2rem 0', color: '#b00020', fontSize: '0.95rem', fontWeight: 'bold' },
@@ -400,4 +558,21 @@ const s = {
   cartTotalAmt:     { color: ACCENT, fontSize: '1.2rem' },
   placeOrderBtn:    { width: '100%', background: BROWN, color: '#fff', border: 'none', borderRadius: '50px', padding: '1rem', fontSize: '1.1rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'bold', marginTop: '0.5rem' },
   toast:            { position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', background: '#2d6a4f', color: '#fff', padding: '1rem 2rem', borderRadius: '50px', fontSize: '1rem', fontWeight: 'bold', zIndex: 300, boxShadow: '0 4px 20px rgba(0,0,0,0.2)' },
+  assistantOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', zIndex: 400, padding: '1rem' },
+  assistantPopup:   { width: 'min(420px, 100%)', height: 'calc(100vh - 2rem)', background: '#fff', borderRadius: '22px', border: '1px solid #e8d5b7', boxShadow: '0 18px 40px rgba(0,0,0,0.22)', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' },
+  assistantHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' },
+  assistantBadge:   { display: 'inline-block', padding: '0.25rem 0.65rem', borderRadius: '999px', background: '#fdf6ec', border: '1px solid #e8d5b7', fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '0.35rem' },
+  assistantTitle:   { margin: 0, fontSize: '1.35rem', color: BROWN },
+  assistantClose:   { border: 'none', background: '#f3e6d8', color: BROWN, borderRadius: '50%', width: '2rem', height: '2rem', cursor: 'pointer', fontWeight: 'bold' },
+  assistantDescription: { margin: 0, color: '#6b4b2c', fontSize: '0.95rem' },
+  assistantQuickRow: { display: 'flex', flexWrap: 'wrap', gap: '0.5rem' },
+  assistantQuickButton: { border: '1px solid #e8d5b7', background: '#fdf6ec', color: BROWN, borderRadius: '999px', padding: '0.45rem 0.7rem', cursor: 'pointer', fontFamily: 'inherit' },
+  assistantChatWindow: { flex: 1, minHeight: 0, overflowY: 'auto', border: '1px solid #f0e0cc', borderRadius: '18px', padding: '0.85rem', background: '#fffdf9', display: 'flex', flexDirection: 'column', gap: '0.75rem' },
+  assistantMessage: { maxWidth: '80%', padding: '0.8rem 0.95rem', borderRadius: '16px', lineHeight: 1.45, whiteSpace: 'pre-wrap' },
+  assistantMessageBot: { background: '#f3e6d8', alignSelf: 'flex-start' },
+  assistantMessageUser: { background: BROWN, color: '#fff', alignSelf: 'flex-end' },
+  assistantError:   { color: '#b00020', fontWeight: 'bold', margin: 0 },
+  assistantForm:    { display: 'flex', gap: '0.65rem' },
+  assistantInput:   { flex: 1, borderRadius: '999px', border: '1px solid #d8c1a5', padding: '0.85rem 0.95rem', fontSize: '1rem', fontFamily: 'inherit' },
+  assistantSendButton: { border: 'none', borderRadius: '999px', background: ACCENT, color: '#fff', padding: '0.85rem 1.2rem', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'inherit' },
 };

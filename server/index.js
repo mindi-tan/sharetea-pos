@@ -31,6 +31,7 @@ app.use('/api/cashier', require('./routes/cashier'));
 app.use('/api/customer', require('./routes/customer'));
 app.use('/api/menu', require('./routes/menu'));
 app.use('/api/kitchen', require('./routes/kitchen'));
+app.use('/api/assistant', require('./routes/assistant'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
