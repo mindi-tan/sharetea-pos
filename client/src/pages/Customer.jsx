@@ -433,7 +433,6 @@ export default function Customer() {
           >
             <div style={s.assistantHeader}>
               <div>
-                <div style={s.assistantBadge}>Personal Assistant</div>
                 <h2 id="assistant-title" style={s.assistantTitle}>Reveille Boba Helper</h2>
               </div>
               <button type="button" style={s.assistantClose} onClick={() => setShowAssistant(false)} aria-label="Close assistant">
@@ -442,7 +441,7 @@ export default function Customer() {
             </div>
 
             <p style={s.assistantDescription}>
-              Ask about menu items, toppings, pricing, or ordering steps. The assistant uses your live database menu data.
+              Ask about menu items, toppings, pricing, or ordering steps.
             </p>
 
             <div style={s.assistantQuickRow}>
@@ -558,8 +557,8 @@ const s = {
   cartTotalAmt:     { color: ACCENT, fontSize: '1.2rem' },
   placeOrderBtn:    { width: '100%', background: BROWN, color: '#fff', border: 'none', borderRadius: '50px', padding: '1rem', fontSize: '1.1rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'bold', marginTop: '0.5rem' },
   toast:            { position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', background: '#2d6a4f', color: '#fff', padding: '1rem 2rem', borderRadius: '50px', fontSize: '1rem', fontWeight: 'bold', zIndex: 300, boxShadow: '0 4px 20px rgba(0,0,0,0.2)' },
-  assistantOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', zIndex: 400, padding: '1rem' },
-  assistantPopup:   { width: 'min(420px, 100%)', height: 'calc(100vh - 2rem)', background: '#fff', borderRadius: '22px', border: '1px solid #e8d5b7', boxShadow: '0 18px 40px rgba(0,0,0,0.22)', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' },
+  assistantOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', justifyContent: 'flex-end', alignItems: 'stretch', zIndex: 400, padding: '0.75rem 0.75rem' },
+  assistantPopup:   { width: 'min(420px, 100%)', height: 'calc(100dvh - 1.5rem)', maxHeight: 'calc(100dvh - 1.5rem)', background: '#fff', borderRadius: '22px', border: '1px solid #e8d5b7', boxShadow: '0 18px 40px rgba(0,0,0,0.22)', padding: '1rem', boxSizing: 'border-box', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.85rem' },
   assistantHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' },
   assistantBadge:   { display: 'inline-block', padding: '0.25rem 0.65rem', borderRadius: '999px', background: '#fdf6ec', border: '1px solid #e8d5b7', fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '0.35rem' },
   assistantTitle:   { margin: 0, fontSize: '1.35rem', color: BROWN },

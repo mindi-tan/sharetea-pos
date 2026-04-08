@@ -4,7 +4,7 @@ const db = require('../db');
 
 const router = express.Router();
 
-const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
+const apiKey = process.env.OPENROUTER_API_KEY;
 
 const openai = new OpenAI({
   apiKey,

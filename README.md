@@ -12,7 +12,7 @@
 ### Server
 ```bash
 cd server
-cp .env.example .env   # fill in DATABASE_URL and OpenRouter settings
+# create .env with DATABASE_URL and OpenRouter settings
 npm install
 npm run dev
 ```
@@ -20,7 +20,7 @@ npm run dev
 ### Client
 ```bash
 cd client
-cp .env.local.example .env.local   # points the client to http://localhost:5000
+# create .env.local with VITE_API_URL=http://localhost:5000
 npm install
 npm run dev
 ```
