@@ -1,71 +1,136 @@
 :root {
+  /* Main body text color */
   --text: #6b6375;
+
+  /* Heading text color */
   --text-h: #08060d;
+
+  /* Main page background color */
   --bg: #fff;
+
+  /* Default border color */
   --border: #e5e4e7;
+
+  /* Background color for inline code elements */
   --code-bg: #f4f3ec;
+
+  /* Primary accent color used for highlights/buttons */
   --accent: #aa3bff;
+
+  /* Semi-transparent accent background */
   --accent-bg: rgba(170, 59, 255, 0.1);
+
+  /* Semi-transparent accent border */
   --accent-border: rgba(170, 59, 255, 0.5);
+
+  /* Background used for social button area */
   --social-bg: rgba(244, 243, 236, 0.5);
+
+  /* Default shadow styling */
   --shadow:
     rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 
+  /* Font stacks */
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
+  /* Base typography settings for the document */
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
+
+  /* Allow browser to support both light and dark color schemes */
   color-scheme: light dark;
+
+  /* Apply default text and background colors */
   color: var(--text);
   background: var(--bg);
+
+  /* Improve font rendering */
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
+  /* Reduce base font size on smaller screens */
   @media (max-width: 1024px) {
     font-size: 16px;
   }
 }
 
+/* Override variables when user prefers dark mode */
 @media (prefers-color-scheme: dark) {
   :root {
+    /* Dark mode body text color */
     --text: #9ca3af;
+
+    /* Dark mode heading text color */
     --text-h: #f3f4f6;
+
+    /* Dark mode background */
     --bg: #16171d;
+
+    /* Dark mode border color */
     --border: #2e303a;
+
+    /* Dark mode inline code background */
     --code-bg: #1f2028;
+
+    /* Lighter accent color for dark mode */
     --accent: #c084fc;
+
+    /* Dark mode accent background */
     --accent-bg: rgba(192, 132, 252, 0.15);
+
+    /* Dark mode accent border */
     --accent-border: rgba(192, 132, 252, 0.5);
+
+    /* Dark mode background for social button area */
     --social-bg: rgba(47, 48, 58, 0.5);
+
+    /* Stronger shadow for dark mode */
     --shadow:
       rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
   }
 
+  /* Invert icon colors for visibility in dark mode */
   #social .button-icon {
     filter: invert(1) brightness(2);
   }
 }
 
+/* Remove default browser margin from page */
 body {
   margin: 0;
 }
 
+/* Main app container */
 #root {
+  /* Fixed content width with responsive shrink */
   width: 1126px;
   max-width: 100%;
+
+  /* Center container horizontally */
   margin: 0 auto;
+
+  /* Center inline text by default */
   text-align: center;
+
+  /* Left and right borders */
   border-inline: 1px solid var(--border);
+
+  /* Make app fill at least the full small viewport height */
   min-height: 100svh;
+
+  /* Use flex layout for vertical stacking */
   display: flex;
   flex-direction: column;
+
+  /* Include borders in total width/height calculations */
   box-sizing: border-box;
 }
 
+/* Shared heading styles */
 h1,
 h2 {
   font-family: var(--heading);
@@ -73,28 +138,38 @@ h2 {
   color: var(--text-h);
 }
 
+/* Main page heading */
 h1 {
   font-size: 56px;
   letter-spacing: -1.68px;
   margin: 32px 0;
+
+  /* Smaller heading on medium/small screens */
   @media (max-width: 1024px) {
     font-size: 36px;
     margin: 20px 0;
   }
 }
+
+/* Section heading */
 h2 {
   font-size: 24px;
   line-height: 118%;
   letter-spacing: -0.24px;
   margin: 0 0 8px;
+
+  /* Slightly reduce section heading size on smaller screens */
   @media (max-width: 1024px) {
     font-size: 20px;
   }
 }
+
+/* Remove default paragraph margins */
 p {
   margin: 0;
 }
 
+/* Shared monospace styling for code and counter elements */
 code,
 .counter {
   font-family: var(--mono);
@@ -103,9 +178,11 @@ code,
   color: var(--text-h);
 }
 
+/* Inline code appearance */
 code {
   font-size: 15px;
   line-height: 135%;
   padding: 4px 8px;
   background: var(--code-bg);
 }
+

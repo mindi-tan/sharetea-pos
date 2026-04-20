@@ -1,12 +1,18 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+/**
+ * MenuBoard.jsx — full-viewport wall / kiosk menu: static categories and sample prices,
+ * toppings blurb. Styled with inline objects (`s`); no API calls.
+ */
 
+// Brand palette (warm browns + cream) for header, cards, and footer.
 const BROWN = '#4a2c0a';
 const CREAM = '#fdf6ec';
 const ACCENT = '#c8773a';
 const LIGHT = '#fff8f0';
 
-/** Same categories / emojis as the customer ordering view; sample items for the wall menu. */
+/**
+ * Category grid source: names align with the customer-facing menu; `items` are display
+ * strings (name — price). Edit here to change what the board shows; live POS may differ.
+ */
 const MENU_SECTIONS = [
   {
     name: 'Milk Tea',
@@ -78,153 +84,215 @@ const MENU_SECTIONS = [
   },
 ];
 
+// Single line shown next to “Add-ons” in the footer.
 const TOPPINGS_LINE =
   'Boba, grass jelly, egg pudding, aloe, lychee jelly, red bean, crystal boba, cheese foam — ask for prices at the counter.';
 
+/** Inline styles: one object keeps the board self-contained without a separate CSS file. */
 const s = {
-  root: { minHeight: '100vh', background: CREAM, fontFamily: "'Georgia', serif", color: BROWN },
+  // --- Page shell (100dvh, no document scroll) ---
+  root: {
+    height: '100dvh',
+    maxHeight: '100dvh',
+    background: CREAM,
+    fontFamily: "'Georgia', serif",
+    color: BROWN,
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+  },
+  // --- Top bar: shop name and tagline ---
   header: {
+    flexShrink: 0,
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '1.2rem 2rem',
+    justifyContent: 'flex-start',
+    gap: '0.5rem',
+    padding: '0.35rem 0.65rem',
     background: BROWN,
     color: '#fff',
-    position: 'sticky',
-    top: 0,
-    zIndex: 100,
   },
-  headerLeft: { display: 'flex', alignItems: 'center', gap: '0.75rem' },
-  logo: { fontSize: '1.5rem', fontWeight: 'bold', letterSpacing: '0.05em', margin: 0 },
-  backBtn: {
-    background: '#fff',
+  headerLeft: {
+    minWidth: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.05rem',
+  },
+  logo: {
+    margin: 0,
+    fontSize: 'clamp(0.85rem, 2.2vw, 1.1rem)',
+    fontWeight: 'bold',
+    letterSpacing: '0.04em',
+    lineHeight: 1.15,
+  },
+  tagline: {
+    margin: 0,
+    fontSize: 'clamp(0.58rem, 1.35vw, 0.72rem)',
+    color: '#e8d5c4',
+    fontStyle: 'italic',
+    lineHeight: 1.2,
+  },
+  // --- Main grid area: two rows (4 cols, then 3); flex rows share vertical space ---
+  board: {
+    flex: 1,
+    minHeight: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.2rem',
+    padding: '0.25rem 0.35rem',
+    overflow: 'hidden',
+  },
+  // CSS grid row; `row4` / `row3` spread in sets the column count.
+  row: {
+    flex: 1,
+    minHeight: 0,
+    display: 'grid',
+    gap: '0.2rem',
+    overflow: 'hidden',
+  },
+  // First band: Milk Tea, Fruit Tea, Fresh Milk, Brewed Tea.
+  row4: {
+    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+  },
+  // Second band: Ice Blended, Mojito, Seasonal.
+  row3: {
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  },
+  // One category card: title + flex column list; `minWidth: 0` avoids grid overflow.
+  column: {
+    minWidth: 0,
+    minHeight: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    border: `1px solid #e8d5b7`,
+    borderRadius: '6px',
+    background: LIGHT,
+    padding: '0.2rem 0.3rem',
+    overflow: 'hidden',
+  },
+  colTitle: {
+    margin: '0 0 0.15rem',
+    fontSize: 'clamp(0.58rem, 1.25vw, 0.72rem)',
+    fontWeight: 'bold',
+    letterSpacing: '0.04em',
+    textTransform: 'uppercase',
     color: BROWN,
-    borderRadius: '50%',
-    width: '2.2rem',
-    height: '2.2rem',
-    textDecoration: 'none',
-    fontSize: '1.35rem',
-    fontWeight: 900,
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    lineHeight: 1,
-    transition: 'transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease',
+    borderBottom: `1px solid #e8d5b7`,
+    paddingBottom: '0.1rem',
+    lineHeight: 1.15,
+    flexShrink: 0,
   },
-  backBtnHover: {
-    transform: 'translateY(-1px)',
-    boxShadow: '0 3px 10px rgba(0,0,0,0.2)',
-    background: '#f8efe4',
+  // Item list: `flex: 1` fills card under the title; `gap` spaces each `<li>`.
+  list: {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+    flex: 1,
+    minHeight: 0,
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
+    gap: 'clamp(0.2rem, 0.7vw, 0.55rem)',
   },
-  main: {
-    padding: '2rem',
-    maxWidth: '42rem',
-    margin: '0 auto',
-    textAlign: 'left',
+  line: {
+    fontSize: 'clamp(0.52rem, 1.05vw, 0.68rem)',
+    lineHeight: 1.35,
+    padding: 'clamp(0.1rem, 0.45vw, 0.32rem) 0',
+    borderBottom: '1px solid #f0e0cc',
+    wordBreak: 'break-word',
+    hyphens: 'auto',
   },
-  intro: {
-    fontSize: '0.95rem',
+  // --- Bottom strip: toppings copy + ordering hints ---
+  footer: {
+    flexShrink: 0,
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
+    gap: '0.35rem',
+    alignItems: 'start',
+    padding: '0.25rem 0.4rem',
+    borderTop: `2px solid ${ACCENT}`,
+    background: '#fff',
+    fontSize: 'clamp(0.55rem, 1.1vw, 0.7rem)',
+    lineHeight: 1.25,
+  },
+  toppingsLabel: {
+    fontWeight: 'bold',
+    color: BROWN,
+    marginRight: '0.25rem',
+  },
+  footnote: {
+    margin: 0,
     color: '#6b4b2c',
     fontStyle: 'italic',
-    marginBottom: '1.75rem',
-    lineHeight: 1.5,
-  },
-  section: { marginBottom: '1.75rem' },
-  sectionTitle: {
-    fontSize: '1.05rem',
-    fontWeight: 'bold',
-    letterSpacing: '0.06em',
-    textTransform: 'uppercase',
-    margin: '0 0 0.65rem',
-    paddingBottom: '0.35rem',
-    borderBottom: `2px solid #e8d5b7`,
-    color: BROWN,
-  },
-  list: { listStyle: 'none', padding: 0, margin: 0 },
-  line: {
-    padding: '0.35rem 0',
-    borderBottom: '1px solid #f0e0cc',
-    fontSize: '1rem',
-    lineHeight: 1.45,
-  },
-  toppingsBlock: {
-    marginTop: '2rem',
-    padding: '1.25rem',
-    background: LIGHT,
-    border: '2px solid #e8d5b7',
-    borderRadius: '12px',
-  },
-  toppingsTitle: {
-    fontSize: '0.95rem',
-    fontWeight: 'bold',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    margin: '0 0 0.5rem',
-    color: BROWN,
-  },
-  toppingsText: { margin: 0, fontSize: '0.95rem', lineHeight: 1.55, color: '#4a3828' },
-  footnote: {
-    marginTop: '1.75rem',
-    fontSize: '0.88rem',
-    color: '#8a735c',
-    fontStyle: 'italic',
-    lineHeight: 1.5,
   },
   priceHint: { color: ACCENT, fontWeight: 'bold' },
 };
 
+/**
+ * Renders one MENU_SECTIONS entry: accessible heading + list of price lines.
+ * @param {{ section: { name: string; emoji: string; items: string[] } }} props
+ */
+function Column({ section }) {
+  return (
+    <section style={s.column} aria-labelledby={`menu-${section.name}`}>
+      <h2 id={`menu-${section.name}`} style={s.colTitle}>
+        {section.emoji} {section.name}
+      </h2>
+      <ul style={s.list}>
+        {section.items.map((text) => (
+          <li key={text} style={s.line}>
+            {text}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export default function MenuBoard() {
-  const [backHover, setBackHover] = useState(false);
+  // Split sections to match the 4+3 column layout (see `row4` / `row3`).
+  const rowA = MENU_SECTIONS.slice(0, 4);
+  const rowB = MENU_SECTIONS.slice(4);
 
   return (
     <div style={s.root}>
+      {/* Brand + Portal */}
       <header style={s.header}>
         <div style={s.headerLeft}>
-          <Link
-            to="/"
-            style={{ ...s.backBtn, ...(backHover ? s.backBtnHover : {}) }}
-            aria-label="Back to portal"
-            onMouseEnter={() => setBackHover(true)}
-            onMouseLeave={() => setBackHover(false)}
-          >
-            ⬅
-          </Link>
-          <h1 style={s.logo}>🧋 Reveille Boba</h1>
+          <h1 style={s.logo}>Reveille Boba</h1>
+          <p style={s.tagline}>
+            Menu board — kiosk or cashier. Sample prices; register has today&apos;s totals.
+          </p>
         </div>
       </header>
 
-      <main style={s.main}>
-        <p style={s.intro}>
-          Menu board — order at the kiosk or with a cashier. Prices are samples; see the register for today&apos;s
-          totals.
-        </p>
+      {/* Category grids */}
+      <div style={s.board}>
+        <div style={{ ...s.row, ...s.row4 }}>
+          {rowA.map((section) => (
+            <Column key={section.name} section={section} />
+          ))}
+        </div>
+        <div style={{ ...s.row, ...s.row3 }}>
+          {rowB.map((section) => (
+            <Column key={section.name} section={section} />
+          ))}
+        </div>
+      </div>
 
-        {MENU_SECTIONS.map((section) => (
-          <section key={section.name} style={s.section} aria-labelledby={`menu-${section.name}`}>
-            <h2 id={`menu-${section.name}`} style={s.sectionTitle}>
-              {section.emoji} {section.name}
-            </h2>
-            <ul style={s.list}>
-              {section.items.map((text) => (
-                <li key={text} style={s.line}>
-                  {text}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-
-        <aside style={s.toppingsBlock} aria-label="Toppings">
-          <h3 style={s.toppingsTitle}>Add-ons & toppings</h3>
-          <p style={s.toppingsText}>{TOPPINGS_LINE}</p>
-        </aside>
-
+      {/* Add-ons line + sweetness / ice reminder */}
+      <footer style={s.footer}>
+        <div>
+          <span style={s.toppingsLabel}>Add-ons</span>
+          {TOPPINGS_LINE}
+        </div>
         <p style={s.footnote}>
-          Sweetness <span style={s.priceHint}>(0% · 50% · 100%)</span> and ice{' '}
-          <span style={s.priceHint}>(no · less · regular)</span> are customizable when you order, same as on the
-          customer screen.
+          Sweetness <span style={s.priceHint}>0% / 50% / 100%</span> and ice{' '}
+          <span style={s.priceHint}>no / less / regular</span> when ordering.
         </p>
-      </main>
+      </footer>
     </div>
   );
 }

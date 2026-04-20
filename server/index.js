@@ -32,6 +32,17 @@ app.use('/api/customer', require('./routes/customer'));
 app.use('/api/menu', require('./routes/menu'));
 app.use('/api/kitchen', require('./routes/kitchen'));
 app.use('/api/assistant', require('./routes/assistant'));
+app.use('/api/tts', require('./routes/tts'));
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = Number(process.env.PORT) || 5000;
+const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.on('error', (err) => {
+	if (err.code === 'EADDRINUSE') {
+		console.error(
+			`\nPort ${PORT} is already in use. On macOS, AirPlay Receiver often uses 5000.\n` +
+				`Fix: set PORT=5001 (or another free port) in server/.env and set the same URL in client/.env as VITE_API_URL.\n`
+		);
+		process.exit(1);
+	}
+	throw err;
+});
