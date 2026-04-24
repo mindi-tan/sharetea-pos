@@ -2073,7 +2073,8 @@ export default function Manager() {
                                   <li key={it.order_item_id}>
                                     {it.qty}× {it.drink_name || 'Drink'}{' '}
                                     <span style={{ opacity: 0.85 }}>
-                                      ({it.sweetness_level}% sugar, {String(it.ice_level || '').replace(/_/g, ' ')})
+                                      (Size {it.drink_size ?? 'M'} · {it.sweetness_level}% sugar,{' '}
+                                      {String(it.ice_level || '').replace(/_/g, ' ')})
                                     </span>
                                   </li>
                                 ))}

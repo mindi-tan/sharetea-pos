@@ -153,6 +153,7 @@ export default function Customer() {
   const [customization, setCustomization] = useState({
     sugar: '100',
     ice: 'NORMAL_ICE',
+    size: 'M',
     toppings: [],
   });
 
@@ -460,7 +461,7 @@ export default function Customer() {
   // and reset its customization options to defaults.
   const openModal = (drink) => {
     setModal(drink);
-    setCustomization({ sugar: '100', ice: 'NORMAL_ICE', toppings: [] });
+    setCustomization({ sugar: '100', ice: 'NORMAL_ICE', size: 'M', toppings: [] });
     setWizardStep(0);
   };
 
@@ -476,6 +477,7 @@ export default function Customer() {
 
   // Calculate the subtotal for one drink with the chosen toppings and size.
   const getSubtotal = (drink, selectedToppingIds, size = 'M') => {
+    const sizeKey = size && SIZE_MULTIPLIERS[size] != null ? size : 'M';
     const toppingCost = selectedToppingIds.reduce((sum, tid) => {
       // Find the topping that matches the selected ID.
       const t = toppings.find((t) => t.topping_id === tid);
@@ -485,7 +487,7 @@ export default function Customer() {
     }, 0);
 
     // Apply size multiplier to base drink price + topping cost.
-    const sizeMultiplier = SIZE_MULTIPLIERS[size] || 1.0;
+    const sizeMultiplier = SIZE_MULTIPLIERS[sizeKey];
     return (parseFloat(drink.base_price) + toppingCost) * sizeMultiplier;
   };
 
@@ -736,6 +738,7 @@ export default function Customer() {
           qty: item.qty,
           sweetness_level: item.sweetness_level,
           ice_level: item.ice_level,
+          drink_size: item.size && ['S', 'M', 'L'].includes(item.size) ? item.size : 'M',
           drink_unit_price: Number(item.drink.base_price),
           toppings: item.toppings,
           total_price: Number((getDiscountedUnitPrice(item) * item.qty).toFixed(2)),
@@ -1238,9 +1241,14 @@ export default function Customer() {
                   {wizardStep >= 1 && (
                     <div style={s.wizardSummary} aria-label="Your choices so far">
                       <span style={s.wizardSummaryChip}>
-                        {WIZARD_SUGAR[customization.sugar].emoji} {WIZARD_SUGAR[customization.sugar].label}
+                        📏 Size {customization.size || 'M'}
                       </span>
                       {wizardStep >= 2 && (
+                        <span style={s.wizardSummaryChip}>
+                          {WIZARD_SUGAR[customization.sugar].emoji} {WIZARD_SUGAR[customization.sugar].label}
+                        </span>
+                      )}
+                      {wizardStep >= 3 && (
                         <span style={s.wizardSummaryChip}>
                           {WIZARD_ICE[customization.ice].emoji} {WIZARD_ICE[customization.ice].label}
                         </span>
@@ -1253,12 +1261,33 @@ export default function Customer() {
                     </div>
                   )}
                 </div>
-                <div style={s.wizardDots} aria-label={`Step ${wizardStep + 1} of 3`}>
-                  {[0, 1, 2].map(i => (
+                <div style={s.wizardDots} aria-label={`Step ${wizardStep + 1} of 4`}>
+                  {[0, 1, 2, 3].map(i => (
                     <span key={i} style={{ ...s.wizardDot, ...(i === wizardStep ? s.wizardDotActive : {}) }} />
                   ))}
                 </div>
                 {wizardStep === 0 && (
+                  <div style={s.wizardStep}>
+                    <p style={s.wizardQuestion}>What size? 📏</p>
+                    <div style={s.wizardOptions} role="group" aria-label="Drink size">
+                      {SIZE_LEVELS.map(({ label, value }) => (
+                        <button
+                          key={value}
+                          style={{ ...s.wizardOptBtn, ...(customization.size === value ? s.wizardOptBtnActive : {}) }}
+                          onClick={() => { setCustomization(prev => ({ ...prev, size: value })); setWizardStep(1); }}
+                          aria-pressed={customization.size === value}
+                          aria-label={`Size ${label}`}
+                        >
+                          <span style={s.wizardOptEmoji}>
+                            {value === 'S' ? 'S' : value === 'M' ? 'M' : 'L'}
+                          </span>
+                          <span style={s.wizardOptLabel}>Size {label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {wizardStep === 1 && (
                   <div style={s.wizardStep}>
                     <p style={s.wizardQuestion}>How sweet? 🍬</p>
                     <div style={s.wizardOptions} role="group" aria-label="Sweetness level">
@@ -1270,7 +1299,7 @@ export default function Customer() {
                         <button
                           key={value}
                           style={{ ...s.wizardOptBtn, ...(customization.sugar === value ? s.wizardOptBtnActive : {}) }}
-                          onClick={() => { setCustomization(prev => ({ ...prev, sugar: value })); setWizardStep(1); }}
+                          onClick={() => { setCustomization(prev => ({ ...prev, sugar: value })); setWizardStep(2); }}
                           aria-pressed={customization.sugar === value}
                           aria-label={`Sweetness: ${label}`}
                         >
@@ -1279,9 +1308,10 @@ export default function Customer() {
                         </button>
                       ))}
                     </div>
+                    <button style={s.wizardBackBtn} onClick={() => setWizardStep(0)}>← Back</button>
                   </div>
                 )}
-                {wizardStep === 1 && (
+                {wizardStep === 2 && (
                   <div style={s.wizardStep}>
                     <p style={s.wizardQuestion}>{modal.category_name === 'Hot Drinks' ? 'How hot? ☕' : 'How cold? 🧊'}</p>
                     <div style={s.wizardOptions} role="group" aria-label={modal.category_name === 'Hot Drinks' ? 'Temperature' : 'Ice level'}>
@@ -1295,7 +1325,7 @@ export default function Customer() {
                         <button
                           key={value}
                           style={{ ...s.wizardOptBtn, ...(customization.ice === value ? s.wizardOptBtnActive : {}) }}
-                          onClick={() => { setCustomization(prev => ({ ...prev, ice: value })); setWizardStep(2); }}
+                          onClick={() => { setCustomization(prev => ({ ...prev, ice: value })); setWizardStep(3); }}
                           aria-pressed={customization.ice === value}
                           aria-label={`${modal.category_name === 'Hot Drinks' ? 'Temperature' : 'Ice level'}: ${label}`}
                         >
@@ -1304,10 +1334,10 @@ export default function Customer() {
                         </button>
                       ))}
                     </div>
-                    <button style={s.wizardBackBtn} onClick={() => setWizardStep(0)}>← Back</button>
+                    <button style={s.wizardBackBtn} onClick={() => setWizardStep(1)}>← Back</button>
                   </div>
                 )}
-                {wizardStep === 2 && (
+                {wizardStep === 3 && (
                   <div style={s.wizardStep}>
                     <p style={s.wizardQuestion}>Any extras? ✨</p>
                     <div style={s.wizardToppingGrid} role="group" aria-label="Toppings">
@@ -1326,7 +1356,7 @@ export default function Customer() {
                       ))}
                     </div>
                     <div style={s.wizardFooter}>
-                      <button style={s.wizardBackBtn} onClick={() => setWizardStep(1)}>← Back</button>
+                      <button style={s.wizardBackBtn} onClick={() => setWizardStep(2)}>← Back</button>
                       <span style={s.wizardTotal}>${getSubtotal(modal, customization.toppings, customization.size).toFixed(2)}</span>
                       <button style={s.wizardAddBtn} className="fun-btn" onClick={addToCart} aria-label={`Add ${modal.drink_name} to cart`}>
                         Add to Cart 🛒

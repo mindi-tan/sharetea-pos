@@ -583,6 +583,10 @@ export default function Cashier() {
                           {getToppingNames(item.toppings)}
                         </div>
                       )}
+                    </div>
+
+                    <div style={styles.ticketItemRight}>
+                      <div style={styles.ticketItemPrice}>${Number(item.total_price).toFixed(2)}</div>
                       <div style={styles.ticketQtyRow} aria-label="Line quantity">
                         <button
                           type="button"
@@ -604,10 +608,6 @@ export default function Cashier() {
                           +
                         </button>
                       </div>
-                    </div>
-
-                    <div style={styles.ticketItemRight}>
-                      <div style={styles.ticketItemPrice}>${Number(item.total_price).toFixed(2)}</div>
                       <button
                         type="button"
                         style={styles.removeButton}
@@ -1257,8 +1257,8 @@ const styles = {
   ticketQtyRow: {
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'flex-end',
     gap: '0.45rem',
-    marginTop: '0.4rem',
   },
   ticketQtyBtn: {
     width: '2.1rem',
@@ -1279,13 +1279,17 @@ const styles = {
     fontSize: '0.9rem',
   },
   ticketItemRight: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: '0.35rem',
+    minWidth: '118px',
     textAlign: 'right',
-    minWidth: '85px',
   },
   ticketItemPrice: {
     fontWeight: 800,
     color: BLUE,
-    marginBottom: '0.35rem',
+    marginBottom: 0,
   },
   removeButton: {
     border: 'none',
