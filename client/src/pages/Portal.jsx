@@ -16,25 +16,32 @@ const styles = {
 
   // Styles for the page heading
   h1: {
-    marginBottom: '2rem',          // Add space below the title
+    marginBottom: 'clamp(1.25rem, 4vmin, 2rem)',
+    fontSize: 'clamp(1.75rem, 5vmin + 1vw, 2.5rem)',
   },
 
   // Styles for the container holding the navigation buttons
   buttons: {
-    display: 'flex',               // Use flexbox layout
-    flexDirection: 'column',       // Stack links vertically
-    gap: '1rem',                   // Add space between links
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 'clamp(0.75rem, 2vmin, 1.25rem)',
+    width: 'min(22rem, 90vw)',
   },
 
   // Styles applied to each Link so it looks like a button
   link: {
-    padding: '0.75rem 2rem',       // Add inner spacing
-    fontSize: '1.1rem',            // Make text slightly larger
-    textAlign: 'center',           // Center the link text
-    textDecoration: 'none',        // Remove underline
-    color: 'white',                // Set text color
-    background: '#333',            // Dark background color
-    borderRadius: '6px',           // Rounded corners
+    padding: 'clamp(0.85rem, 2.2vmin, 1.15rem) clamp(1.5rem, 4vw, 2.5rem)',
+    fontSize: 'clamp(1.05rem, 2.5vmin + 0.5vw, 1.35rem)',
+    textAlign: 'center',
+    textDecoration: 'none',
+    color: 'white',
+    background: '#333',
+    borderRadius: '10px',
+    minHeight: 'clamp(2.75rem, 8vmin, 3.4rem)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontWeight: 600,
   },
 };
 

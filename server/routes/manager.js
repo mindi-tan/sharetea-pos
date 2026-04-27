@@ -580,6 +580,74 @@ router.get('/reports/x-report', async (req, res) => {
   }
 });
 
+// Z-Report status: returns today's filed report or null.
+// No side effects.
+router.get('/reports/z-report/today', async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `
+      SELECT report_date,
+             run_at,
+             total_orders,
+             total_sales::text AS total_sales,
+             tax_amount::text  AS tax_amount
+      FROM z_report
+      WHERE report_date = CURRENT_DATE
+      `
+    );
+    res.json(rows[0] || null);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load Z-report status' });
+  }
+});
+
+// Z-Report: end-of-day close. Computes totals and inserts a row.
+// Idempotent via PRIMARY KEY (report_date) — duplicate calls return 409.
+router.post('/reports/z-report', async (req, res) => {
+  try {
+    const { rows: aggRows } = await db.query(
+      `
+      SELECT
+        COUNT(DISTINCT co.order_id)::int                                  AS total_orders,
+        COALESCE(SUM(co.order_total::numeric), 0)                         AS total_sales,
+        COALESCE(SUM(oi.total_price - (oi.drink_unit_price * oi.qty)), 0) AS tax_amount
+      FROM cust_order co
+      LEFT JOIN order_item oi ON oi.order_id = co.order_id
+      WHERE co.order_ts >= CURRENT_DATE
+        AND co.order_ts <  CURRENT_DATE + INTERVAL '1 day'
+      `
+    );
+
+    const totals = aggRows[0] || { total_orders: 0, total_sales: 0, tax_amount: 0 };
+
+    try {
+      const { rows: insertedRows } = await db.query(
+        `
+        INSERT INTO z_report (report_date, total_orders, total_sales, tax_amount)
+        VALUES (CURRENT_DATE, $1, $2, $3)
+        RETURNING report_date,
+                  run_at,
+                  total_orders,
+                  total_sales::text AS total_sales,
+                  tax_amount::text  AS tax_amount
+        `,
+        [totals.total_orders, totals.total_sales, totals.tax_amount]
+      );
+      res.status(201).json(insertedRows[0]);
+    } catch (insertErr) {
+      // PostgreSQL unique_violation = already filed today
+      if (insertErr.code === '23505') {
+        return res.status(409).json({ error: 'Z-report has already been filed today' });
+      }
+      throw insertErr;
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to run Z-report' });
+  }
+});
+
 // Restock Report: items below a threshold.
 // Since inventory_item does not currently have min_qty, this uses a query threshold.
 router.get('/reports/restock', async (req, res) => {

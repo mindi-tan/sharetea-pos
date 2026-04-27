@@ -18,6 +18,16 @@ const EMPLOYEE_ROLE_OPTIONS = [
   { value: 'MANAGER', label: 'Manager' },
 ];
 
+/** Tab order and labels (first tab matches default `activeTab`: reports). */
+const MANAGER_TABS = [
+  { id: 'reports', label: 'Manager Reports' },
+  { id: 'employees', label: 'Employees' },
+  { id: 'menu', label: 'Menu & recipes' },
+  { id: 'inventory', label: 'Inventory' },
+  { id: 'restockHistory', label: 'Restock history' },
+  { id: 'orders', label: 'Orders' },
+];
+
 function formatMoney(value) {
   const n = Number(value);
   if (Number.isNaN(n)) return value ?? '—';
@@ -65,6 +75,11 @@ export default function Manager() {
   const [restockReport, setRestockReport] = useState([]);
   const [reportsLoading, setReportsLoading] = useState(false);
 
+  // Z-Report (end-of-day close) state.
+  // zReport is null when not yet filed today; an object once filed.
+  const [zReport, setZReport] = useState(null);
+  const [zReportRunning, setZReportRunning] = useState(false);
+
   // Drink recipe editing state.
   // A recipe connects one drink to inventory items through drink_recipe.
   const [selectedRecipeDrinkId, setSelectedRecipeDrinkId] = useState('');
@@ -75,15 +90,8 @@ export default function Manager() {
   });
   const [recipeUpdating, setRecipeUpdating] = useState(false);
 
-  // state for collapsable menus
-  const [openSections, setOpenSections] = useState({
-    employees: false,
-    menu: false,
-    inventory: true,
-    restockHistory: false,
-    reports: true,
-    orders: false,
-  });
+  /** Which manager workspace tab is visible (`reports` opens by default). */
+  const [activeTab, setActiveTab] = useState('reports');
 
   // Inventory management state.
   // This uses the inventory_item table.
@@ -656,28 +664,32 @@ export default function Manager() {
     setReportsLoading(true);
 
     try {
-      const [salesRes, usageRes, xRes, restockRes] = await Promise.all([
+      const [salesRes, usageRes, xRes, zRes, restockRes] = await Promise.all([
         fetch(toApiUrl(`/api/manager/reports/sales-by-item?start=${reportStart}&end=${reportEnd}`)),
         fetch(toApiUrl(`/api/manager/reports/product-usage?start=${reportStart}&end=${reportEnd}`)),
         fetch(toApiUrl('/api/manager/reports/x-report')),
+        fetch(toApiUrl('/api/manager/reports/z-report/today')),
         fetch(toApiUrl('/api/manager/reports/restock?threshold=1000')),
       ]);
 
       if (!salesRes.ok) throw new Error('Could not load sales report');
       if (!usageRes.ok) throw new Error('Could not load product usage report');
       if (!xRes.ok) throw new Error('Could not load X-report');
+      if (!zRes.ok) throw new Error('Could not load Z-report status');
       if (!restockRes.ok) throw new Error('Could not load restock report');
 
-      const [salesData, usageData, xData, restockData] = await Promise.all([
+      const [salesData, usageData, xData, zData, restockData] = await Promise.all([
         salesRes.json(),
         usageRes.json(),
         xRes.json(),
+        zRes.json(),
         restockRes.json(),
       ]);
 
       setSalesByItem(Array.isArray(salesData) ? salesData : []);
       setProductUsage(Array.isArray(usageData) ? usageData : []);
       setXReport(Array.isArray(xData) ? xData : []);
+      setZReport(zData); // null until the Z-report is filed today
       setRestockReport(Array.isArray(restockData) ? restockData : []);
     } catch (e) {
       setError(e.message || 'Failed to load reports');
@@ -685,7 +697,33 @@ export default function Manager() {
       setReportsLoading(false);
     }
   }
-    useEffect(() => {
+
+  /**
+   * Run the Z-Report (end-of-day close).
+   * Confirms with the manager, POSTs to the backend, and updates local state.
+   * The backend enforces the once-per-day rule via PRIMARY KEY on report_date,
+   * so a duplicate run will return a 409 which we surface as an error.
+   */
+  async function handleRunZReport() {
+    if (zReport) return;
+    if (!window.confirm('Run end-of-day Z-Report? This can only be done once per day.')) return;
+
+    setError('');
+    setZReportRunning(true);
+    try {
+      const res = await fetch(toApiUrl('/api/manager/reports/z-report'), {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to run Z-report');
+      setZReport(data);
+    } catch (e) {
+      setError(e.message || 'Failed to run Z-report');
+    } finally {
+      setZReportRunning(false);
+    }
+  }
+  useEffect(() => {
     if (!isAuthenticated) return;
     loadReports();
   }, [isAuthenticated]);
@@ -713,13 +751,6 @@ export default function Manager() {
     ...lowestStockItems.map((item) => Number(item.current_qty) || 0)
   );
 
-  function toggleSection(sectionName) {
-    setOpenSections((prev) => ({
-      ...prev,
-      [sectionName]: !prev[sectionName],
-    }));
-  }
-
   const maxSalesByItemQty = Math.max(
     1,
     ...salesByItem.map((row) => Number(row.qty_sold) || 0)
@@ -736,20 +767,35 @@ export default function Manager() {
   );
 
   const shell = {
-    sectionHeaderButton: {
-      width: '100%',
-      border: '1px solid var(--border)',
-      borderRadius: '10px',
-      background: 'var(--code-bg)',
-      color: 'var(--text-h)',
-      padding: '0.85rem 1rem',
-      cursor: 'pointer',
+    tabList: {
       display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      fontWeight: 700,
-      fontSize: '1rem',
-      marginBottom: '0.75rem',
+      flexWrap: 'wrap',
+      gap: '0.4rem',
+      marginBottom: '1.5rem',
+      padding: '0.4rem',
+      border: '1px solid var(--border)',
+      borderRadius: '12px',
+      background: 'var(--code-bg)',
+      boxShadow: 'var(--shadow)',
+    },
+    tab: {
+      border: '1px solid transparent',
+      borderRadius: '8px',
+      padding: '0.5rem 0.85rem',
+      cursor: 'pointer',
+      fontWeight: 600,
+      fontSize: '0.88rem',
+      background: 'transparent',
+      color: 'var(--text)',
+      fontFamily: 'inherit',
+    },
+    tabActive: {
+      background: 'var(--text-h)',
+      color: 'var(--bg)',
+      border: '1px solid var(--border)',
+    },
+    tabPanel: {
+      marginBottom: '0.5rem',
     },
     authPage: {
       minHeight: '100vh',
@@ -1077,6 +1123,7 @@ export default function Manager() {
             });
             setError('');
             setAuthError('');
+            setActiveTab('reports');
 
             if (window.google?.accounts?.id) {
               window.google.accounts.id.disableAutoSelect();
@@ -1121,18 +1168,33 @@ export default function Manager() {
             </div>
           </section>
 
-          <section aria-labelledby="employees-heading" style={shell.section}>
-            <button
-              type="button"
-              style={shell.sectionHeaderButton}
-              onClick={() => toggleSection('employees')}
-            >
-              <span>Employee Management</span>
-              <span>{openSections.employees ? '▲' : '▼'}</span>
-                </button>
+          <div style={shell.tabList} role="tablist" aria-label="Manager dashboard sections">
+            {MANAGER_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                id={`manager-tab-${tab.id}`}
+                aria-selected={activeTab === tab.id}
+                aria-controls={`manager-panel-${tab.id}`}
+                style={{
+                  ...shell.tab,
+                  ...(activeTab === tab.id ? shell.tabActive : {}),
+                }}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-                {openSections.employees ? (
-                  <>
+          {activeTab === 'employees' && (
+          <section
+            role="tabpanel"
+            id="manager-panel-employees"
+            aria-labelledby="manager-tab-employees"
+            style={{ ...shell.section, ...shell.tabPanel }}
+          >
                 <div style={shell.sectionTopRow}>
                   <div>
                     <h2
@@ -1326,22 +1388,29 @@ export default function Manager() {
                     </tbody>
                   </table>
                 </div>
-              </>
-            ) : null}
           </section>
+          )}
 
-          <section aria-labelledby="menu-heading" style={shell.section}>
-            <button
-              type="button"
-              style={shell.sectionHeaderButton}
-              onClick={() => toggleSection('menu')}
-            >
-              <span>Manage Menu</span>
-              <span>{openSections.menu ? '▲' : '▼'}</span>
-            </button>
-
-            {openSections.menu ? (
-              <>
+          {activeTab === 'menu' && (
+          <section
+            role="tabpanel"
+            id="manager-panel-menu"
+            aria-labelledby="manager-tab-menu"
+            style={{ ...shell.section, ...shell.tabPanel }}
+          >
+                <div style={shell.sectionTopRow}>
+                  <div>
+                    <h2
+                      id="menu-heading"
+                      style={{ ...shell.title, fontSize: '1.25rem', marginBottom: '0.2rem' }}
+                    >
+                      Manage menu & recipes
+                    </h2>
+                    <p style={shell.sectionHint}>
+                      Add drinks, remove drinks, and edit per-drink inventory recipes.
+                    </p>
+                  </div>
+                </div>
                 <form style={shell.menuForm} onSubmit={handleAddDrink}>
                   <input
                     style={shell.menuInput}
@@ -1541,22 +1610,16 @@ export default function Manager() {
                     </table>
                   </div>
                 </div>
-                </>
-            ) : null}
           </section>
+          )}
 
-          <section aria-labelledby="inventory-heading" style={shell.section}>
-            <button
-              type="button"
-              style={shell.sectionHeaderButton}
-              onClick={() => toggleSection('inventory')}
-            >
-              <span>Inventory Management</span>
-              <span>{openSections.inventory ? '▲' : '▼'}</span>
-            </button>
-
-            {openSections.inventory ? (
-              <>
+          {activeTab === 'inventory' && (
+          <section
+            role="tabpanel"
+            id="manager-panel-inventory"
+            aria-labelledby="manager-tab-inventory"
+            style={{ ...shell.section, ...shell.tabPanel }}
+          >
                 <div style={shell.sectionTopRow}>
                   <div>
                     <h2
@@ -1784,22 +1847,16 @@ export default function Manager() {
                     </tbody>
                   </table>
                 </div>
-             </>
-            ) : null}
           </section>
+          )}
 
-          <section aria-labelledby="reports-heading" style={shell.section}>
-            <button
-              type="button"
-              style={shell.sectionHeaderButton}
-              onClick={() => toggleSection('reports')}
-            >
-              <span>Manager Reports</span>
-              <span>{openSections.reports ? '▲' : '▼'}</span>
-            </button>
-
-            {openSections.reports ? (
-              <>
+          {activeTab === 'reports' && (
+          <section
+            role="tabpanel"
+            id="manager-panel-reports"
+            aria-labelledby="manager-tab-reports"
+            style={{ ...shell.section, ...shell.tabPanel }}
+          >
                 <div style={shell.sectionTopRow}>
                   <div>
                     <h2
@@ -1934,6 +1991,41 @@ export default function Manager() {
                   </div>
 
                   <div style={shell.card}>
+                    <div style={shell.cardLabel}>Z-Report: End-of-Day Close</div>
+
+                    {zReport ? (
+                      <div>
+                        <p style={{ color: 'var(--text-h)', fontWeight: 600, marginBottom: '0.5rem' }}>
+                          Filed today at {new Date(zReport.run_at).toLocaleTimeString()}
+                        </p>
+                        <div style={{ fontSize: '0.9rem', lineHeight: 1.8 }}>
+                          <div>
+                            Total Orders: <strong>{zReport.total_orders}</strong>
+                          </div>
+                          <div>
+                            Total Sales: <strong>{formatMoney(zReport.total_sales)}</strong>
+                          </div>
+                          <div>
+                            Tax Collected: <strong>{formatMoney(zReport.tax_amount)}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <p style={shell.sectionHint}>Z-report has not been filed today.</p>
+                        <button
+                          type="button"
+                          style={shell.primaryButton}
+                          onClick={handleRunZReport}
+                          disabled={zReportRunning}
+                        >
+                          {zReportRunning ? 'Running…' : 'Run Z-Report'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={shell.card}>
                     <div style={shell.cardLabel}>Restock Report</div>
 
                     {restockReport.length === 0 ? (
@@ -1961,22 +2053,16 @@ export default function Manager() {
                     )}
                   </div>
                 </div>
-              </>
-            ) : null}
           </section>
+          )}
 
-          <section aria-labelledby="supply-orders-heading" style={shell.section}>
-            <button
-              type="button"
-              style={shell.sectionHeaderButton}
-              onClick={() => toggleSection('restockHistory')}
-            >
-              <span>Restock History</span>
-              <span>{openSections.restockHistory ? '▲' : '▼'}</span>
-                </button>
-
-                {openSections.restockHistory ? (
-                  <>
+          {activeTab === 'restockHistory' && (
+          <section
+            role="tabpanel"
+            id="manager-panel-restockHistory"
+            aria-labelledby="manager-tab-restockHistory"
+            style={{ ...shell.section, ...shell.tabPanel }}
+          >
                     <div style={shell.sectionTopRow}>
                   <div>
                     <h2
@@ -2026,22 +2112,29 @@ export default function Manager() {
                     </tbody>
                   </table>
                 </div>
-              </>
-            ) : null}
-          </section>          
+          </section>
+          )}
 
-          <section aria-labelledby="orders-heading" style={shell.section}>
-            <button
-              type="button"
-              style={shell.sectionHeaderButton}
-              onClick={() => toggleSection('orders')}
-            >
-              <span>Recent Orders</span>
-              <span>{openSections.orders ? '▲' : '▼'}</span>
-            </button>
-
-            {openSections.orders ? (
-              <>
+          {activeTab === 'orders' && (
+          <section
+            role="tabpanel"
+            id="manager-panel-orders"
+            aria-labelledby="manager-tab-orders"
+            style={{ ...shell.section, ...shell.tabPanel }}
+          >
+                <div style={shell.sectionTopRow}>
+                  <div>
+                    <h2
+                      id="orders-heading"
+                      style={{ ...shell.title, fontSize: '1.25rem', marginBottom: '0.2rem' }}
+                    >
+                      Recent orders
+                    </h2>
+                    <p style={shell.sectionHint}>
+                      Review line items and update each ticket&apos;s status.
+                    </p>
+                  </div>
+                </div>
                 <div style={shell.tableWrap}>
                   <table style={shell.table}>
                     <thead>
@@ -2107,9 +2200,8 @@ export default function Manager() {
                     </tbody>
                   </table>
                 </div>
-              </>
-            ) : null}
           </section>
+          )}
         </>
       )}
     </main>

@@ -102,36 +102,23 @@ const s = {
     overflow: 'hidden',
     boxSizing: 'border-box',
   },
-  // --- Top bar: shop name and tagline ---
+  // --- Top bar: centered shop name ---
   header: {
     flexShrink: 0,
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: '0.5rem',
-    padding: '0.35rem 0.65rem',
+    justifyContent: 'center',
+    padding: 'clamp(0.35rem, 1vmin, 0.65rem) clamp(0.5rem, 1.2vmin, 0.85rem)',
     background: BROWN,
     color: '#fff',
   },
-  headerLeft: {
-    minWidth: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.05rem',
-  },
   logo: {
     margin: 0,
-    fontSize: 'clamp(0.85rem, 2.2vw, 1.1rem)',
+    fontSize: 'clamp(1.1rem, 2.8vmin + 1.8vw, 2rem)',
     fontWeight: 'bold',
     letterSpacing: '0.04em',
-    lineHeight: 1.15,
-  },
-  tagline: {
-    margin: 0,
-    fontSize: 'clamp(0.58rem, 1.35vw, 0.72rem)',
-    color: '#e8d5c4',
-    fontStyle: 'italic',
-    lineHeight: 1.2,
+    lineHeight: 1.12,
+    textAlign: 'center',
   },
   // --- Main grid area: two rows (4 cols, then 3); flex rows share vertical space ---
   board: {
@@ -139,16 +126,23 @@ const s = {
     minHeight: 0,
     display: 'flex',
     flexDirection: 'column',
-    gap: '0.2rem',
-    padding: '0.25rem 0.35rem',
+    gap: 'clamp(0.2rem, 0.6vmin, 0.45rem)',
+    padding: 'clamp(0.2rem, 0.8vmin, 0.5rem) clamp(0.3rem, 1vmin, 0.65rem)',
     overflow: 'hidden',
   },
-  // CSS grid row; `row4` / `row3` spread in sets the column count.
-  row: {
-    flex: 1,
+  // Top band usually has more lines so it gets slightly more vertical flex than the second row.
+  rowUpper: {
+    flex: 1.06,
     minHeight: 0,
     display: 'grid',
-    gap: '0.2rem',
+    gap: 'clamp(0.2rem, 0.6vmin, 0.45rem)',
+    overflow: 'hidden',
+  },
+  rowLower: {
+    flex: 0.94,
+    minHeight: 0,
+    display: 'grid',
+    gap: 'clamp(0.2rem, 0.6vmin, 0.45rem)',
     overflow: 'hidden',
   },
   // First band: Milk Tea, Fruit Tea, Fresh Milk, Brewed Tea.
@@ -166,20 +160,20 @@ const s = {
     display: 'flex',
     flexDirection: 'column',
     border: `1px solid #e8d5b7`,
-    borderRadius: '6px',
+    borderRadius: '8px',
     background: LIGHT,
-    padding: '0.2rem 0.3rem',
+    padding: 'clamp(0.25rem, 0.9vmin, 0.5rem) clamp(0.3rem, 1vmin, 0.55rem)',
     overflow: 'hidden',
   },
   colTitle: {
-    margin: '0 0 0.15rem',
-    fontSize: 'clamp(0.58rem, 1.25vw, 0.72rem)',
+    margin: '0 0 clamp(0.1rem, 0.4vmin, 0.2rem)',
+    fontSize: 'clamp(0.72rem, 1.5vmin + 0.85vw, 1.2rem)',
     fontWeight: 'bold',
     letterSpacing: '0.04em',
     textTransform: 'uppercase',
     color: BROWN,
     borderBottom: `1px solid #e8d5b7`,
-    paddingBottom: '0.1rem',
+    paddingBottom: 'clamp(0.08rem, 0.35vmin, 0.18rem)',
     lineHeight: 1.15,
     flexShrink: 0,
   },
@@ -194,12 +188,12 @@ const s = {
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'flex-start',
-    gap: 'clamp(0.2rem, 0.7vw, 0.55rem)',
+    gap: 'clamp(0.08rem, 0.45vmin, 0.28rem)',
   },
   line: {
-    fontSize: 'clamp(0.52rem, 1.05vw, 0.68rem)',
-    lineHeight: 1.35,
-    padding: 'clamp(0.1rem, 0.45vw, 0.32rem) 0',
+    fontSize: 'clamp(0.7rem, 1.35vmin + 0.55vw, 1.08rem)',
+    lineHeight: 1.28,
+    padding: 'clamp(0.05rem, 0.35vmin, 0.18rem) 0',
     borderBottom: '1px solid #f0e0cc',
     wordBreak: 'break-word',
     hyphens: 'auto',
@@ -209,13 +203,13 @@ const s = {
     flexShrink: 0,
     display: 'grid',
     gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
-    gap: '0.35rem',
+    gap: 'clamp(0.25rem, 0.8vmin, 0.45rem)',
     alignItems: 'start',
-    padding: '0.25rem 0.4rem',
+    padding: 'clamp(0.3rem, 0.9vmin, 0.55rem) clamp(0.35rem, 1vmin, 0.65rem)',
     borderTop: `2px solid ${ACCENT}`,
     background: '#fff',
-    fontSize: 'clamp(0.55rem, 1.1vw, 0.7rem)',
-    lineHeight: 1.25,
+    fontSize: 'clamp(0.68rem, 1.2vmin + 0.45vw, 0.95rem)',
+    lineHeight: 1.3,
   },
   toppingsLabel: {
     fontWeight: 'bold',
@@ -230,6 +224,18 @@ const s = {
   priceHint: { color: ACCENT, fontWeight: 'bold' },
 };
 
+function formatSizes(priceStr) {
+  const base = Number(priceStr.replace('$', ''));
+
+  if (Number.isNaN(base)) return priceStr;
+
+  const small = (base * 0.8).toFixed(2);
+  const medium = base.toFixed(2);
+  const large = (base * 1.2).toFixed(2);
+
+  return `S $${small} / M $${medium} / L $${large}`;
+}
+
 /**
  * Renders one MENU_SECTIONS entry: accessible heading + list of price lines.
  * @param {{ section: { name: string; emoji: string; items: string[] } }} props
@@ -241,11 +247,25 @@ function Column({ section }) {
         {section.emoji} {section.name}
       </h2>
       <ul style={s.list}>
-        {section.items.map((text) => (
-          <li key={text} style={s.line}>
-            {text}
-          </li>
-        ))}
+        {section.items.map((text) => {
+          const [name, price] = text.split(' — ');
+
+          return (
+            <li key={text} style={s.line}>
+              <div style={{ fontWeight: 600 }}>{name}</div>
+
+              <div
+                style={{
+                  fontSize: '0.7em',
+                  color: '#6b4b2c',
+                  marginTop: '0.1rem',
+                }}
+              >
+                {formatSizes(price)}
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
@@ -258,24 +278,19 @@ export default function MenuBoard() {
 
   return (
     <div style={s.root}>
-      {/* Brand + Portal */}
+      {/* Centered brand */}
       <header style={s.header}>
-        <div style={s.headerLeft}>
-          <h1 style={s.logo}>Reveille Boba</h1>
-          <p style={s.tagline}>
-            Menu board — kiosk or cashier. Sample prices; register has today&apos;s totals.
-          </p>
-        </div>
+        <h1 style={s.logo}>Reveille Boba</h1>
       </header>
 
       {/* Category grids */}
       <div style={s.board}>
-        <div style={{ ...s.row, ...s.row4 }}>
+        <div style={{ ...s.rowUpper, ...s.row4 }}>
           {rowA.map((section) => (
             <Column key={section.name} section={section} />
           ))}
         </div>
-        <div style={{ ...s.row, ...s.row3 }}>
+        <div style={{ ...s.rowLower, ...s.row3 }}>
           {rowB.map((section) => (
             <Column key={section.name} section={section} />
           ))}
@@ -289,7 +304,7 @@ export default function MenuBoard() {
           {TOPPINGS_LINE}
         </div>
         <p style={s.footnote}>
-          Sweetness <span style={s.priceHint}>0% / 50% / 100%</span> and ice{' '}
+          Sweetness <span style={s.priceHint}>0% / 50% / 100% / 125%</span> and ice{' '}
           <span style={s.priceHint}>no / less / regular</span> when ordering.
         </p>
       </footer>

@@ -1,19 +1,26 @@
-/**
- * Customer.jsx — self-serve ordering: browse DB-backed menu, customize drinks,
- * optional wheel coupon, OpenRouter assistant, and fun-mode / accessibility extras.
- */
+// Imports
 import { useEffect, useRef, useState } from 'react';
-
 import confetti from 'canvas-confetti';
 
-// Read the API base URL from the Vite environment variable.
-// If it ends with a slash, remove that trailing slash.
+// Maps our short language codes to Google's BCP-47-ish codes. The backend
+// uses these when calling the Translate API.
+const GOOGLE_TRANSLATE_LANGUAGES = {
+  en: 'en',
+  es: 'es',
+  fr: 'fr',
+  hi: 'hi',
+  zh: 'zh-CN',
+};
+
+
+// API
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 
-// Helper function to build a full API URL from a path.
+
 const toApiUrl = (path) => `${API_BASE}${path}`;
 
-// Preset sugar options shown in the customization modal.
+
+// Options
 const ACHIEVEMENTS = [
   { id: 'firstDrink', icon: '🏆', name: 'First Boba!',       hint: 'Add your first drink to the cart' },
   { id: 'topper',     icon: '⭐', name: 'Topping Explorer!',  hint: 'Add toppings to a drink' },
@@ -40,28 +47,28 @@ const SUGAR_LEVELS = [
   { label: '125%', value: '125' },
 ];
 
-// Preset ice options shown in the customization modal.
+
 const ICE_LEVELS = [
   { label: 'No Ice', value: 'NO_ICE' },
   { label: 'Less Ice', value: 'LESS_ICE' },
   { label: 'Regular', value: 'NORMAL_ICE' },
 ];
 
-// Preset size options.
+
 const SIZE_LEVELS = [
   { label: 'S', value: 'S' },
   { label: 'M', value: 'M' },
   { label: 'L', value: 'L' },
 ];
 
-// Size price multipliers (relative to base price).
+// Size price multipliers: menu base_price is treated as MEDIUM; S/L scale only the drink, not toppings.
 const SIZE_MULTIPLIERS = {
-  'S': 0.8,  // 80% of base price
-  'M': 1.0,  // 100% of base price
-  'L': 1.2,  // 120% of base price
+  S: 0.8,
+  M: 1.0,
+  L: 1.2,
 };
 
-// Emoji shown for each drink category.
+
 const categoryEmojis = {
   'Milk Tea': '🧋',
   'Fruit Tea': '🍓',
@@ -75,7 +82,7 @@ const categoryEmojis = {
   Caffeinated: '⚡',
 };
 
-// Initial message shown in the chatbot when it opens.
+
 const assistantStarterMessages = [
   {
     role: 'assistant',
@@ -84,7 +91,7 @@ const assistantStarterMessages = [
   },
 ];
 
-// Quick prompt buttons the user can click in the assistant.
+
 const assistantQuickPrompts = [
   'What are your most popular drinks under $6?',
   'Suggest a fruity drink with low sugar',
@@ -92,7 +99,7 @@ const assistantQuickPrompts = [
   'How do I customize sugar and ice levels?',
 ];
 
-/** Promo segments for the spin wheel; `type` drives how `getDealDiscountForItem` computes savings. */
+
 const WHEEL_DEALS = [
   { id: 'off5', label: '5% Off One Drink', short: '5% OFF', type: 'percent', value: 0.05, color: '#ffd670' },
   { id: 'freeTop', label: 'Free Extra Topping', short: 'FREE TOP', type: 'freeTopping', value: 0, color: '#ff9770' },
@@ -100,15 +107,12 @@ const WHEEL_DEALS = [
   { id: 'off1', label: '$1 Off One Drink', short: '$1 OFF', type: 'amount', value: 1, color: '#8eecf5' },
 ];
 
-/**
- * Preset chips in the footer guide: each maps to server `category_name` strings.
- * For browsing only—does not encode allergen data.
- */
+
 const INGREDIENT_STYLE_PRESETS = [
   {
     id: 'teaFruit',
     label: 'Tea & fruit styles',
-    // Lighter / tea-forward menu section (names must match API categories)
+
     categoryNames: ['Fruit Tea', 'Brewed Tea', 'Mojito'],
   },
   {
@@ -118,38 +122,85 @@ const INGREDIENT_STYLE_PRESETS = [
   },
 ];
 
-// Main customer-facing page component.
-export default function Customer() {
-  // Speaker UI: tracks which drink is currently being read aloud.
-  const [speakingId, setSpeakingId] = useState(null);
-  const currentAudioRef = useRef(null);
+// UI text
+const DEFAULT_UI_TEXT = {
+  title: 'Reveille Boba',
+  cart: 'Cart',
+  all: 'All',
+  browseByCategory: 'Browse by category',
+  yourOrder: 'Your Order',
+  emptyCart: 'Your cart is empty.',
+  placeOrder: 'Place Order',
+  placingOrder: 'Placing Order...',
+  loadingMenu: 'Loading menu...',
+  sweetness: 'Sweetness Level',
+  ice: 'Ice Level',
+  toppings: 'Toppings',
+  pricesFromDb: '(prices from DB)',
+  addToCart: 'Add to Cart',
+  helperTitle: 'Reveille Boba Helper',
+  helperDescription: 'Ask about menu items, toppings, pricing, or ordering steps.',
+  helperThinking: 'Thinking...',
+  helperPlaceholder: 'Ask something about the menu or ordering...',
+  orderPlaced: '✅ Order placed! Thank you!',
+  total: 'Total',
+  size: 'Size',
+  iceLevel: 'Ice Level',
+  noIce: 'No Ice',
+  lessIce: 'Less Ice',
+  regular: 'Regular',
+  hot: 'Hot',
+  temperature: 'Temperature',
+  noSugar: 'No Sugar',
+  littleSugar: 'A Little',
+  fullSweet: 'Full Sweet',
+  extraSweet: 'Extra Sweet',
+  howSweet: 'How sweet?',
+  howCold: 'How cold?',
+  howHot: 'How hot?',
+  anyExtras: 'Any extras?',
+  back: 'Back',
+};
 
-  // Store all drink categories returned from the server.
+
+// Page
+export default function Customer() {
+
+  // State
+  const [speakingId, setSpeakingId] = useState(null);
+
+
   const [categories, setCategories] = useState([]);
 
-  // Store all drinks returned from the server.
+
   const [drinks, setDrinks] = useState([]);
 
-  // Store all toppings returned from the server.
+
   const [toppings, setToppings] = useState([]);
 
-  // Track whether the menu is currently loading.
-  const [loadingMenu, setLoadingMenu] = useState(true);
 
-  // Store any API error message to display to the user.
+  const [loadingMenu, setLoadingMenu] = useState(true);
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem('bobaLanguage') || 'en';
+  });
+  const [uiText, setUiText] = useState(DEFAULT_UI_TEXT);
+  const [translatedCategories, setTranslatedCategories] = useState({});
+  const [translatedDrinks, setTranslatedDrinks] = useState({});
+  const [translatedToppings, setTranslatedToppings] = useState({});
+
+
   const [apiError, setApiError] = useState('');
 
-  // Track which category is currently selected for filtering.
-  // null means show all categories.
+
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  // Store all cart items.
+
   const [cart, setCart] = useState([]);
 
-  // Store the drink currently being customized in the modal.
+
   const [modal, setModal] = useState(null);
 
-  // Store the customization state for the currently open drink.
+
   const [customization, setCustomization] = useState({
     sugar: '100',
     ice: 'NORMAL_ICE',
@@ -157,31 +208,31 @@ export default function Customer() {
     toppings: [],
   });
 
-  // Track whether the cart drawer is open.
+
   const [showCart, setShowCart] = useState(false);
 
-  // Track whether the success toast should be shown.
+
   const [orderPlaced, setOrderPlaced] = useState(false);
 
-  // Track whether an order is actively being submitted.
+
   const [placingOrder, setPlacingOrder] = useState(false);
 
-  // Track whether the assistant popup is open.
+
   const [showAssistant, setShowAssistant] = useState(false);
 
-  // Store the assistant chat messages.
+
   const [assistantMessages, setAssistantMessages] = useState(
     assistantStarterMessages
   );
 
-  // Store the current text typed into the assistant input.
+
   const [assistantInput, setAssistantInput] = useState('');
 
-  // Track whether the assistant is waiting on a reply.
+
   const [assistantLoading, setAssistantLoading] = useState(false);
   const [assistantError, setAssistantError]     = useState('');
 
-  // --- Header extras: weather chip, feature dropdown, spin wheel, coupon targeting ---
+
   const [weather, setWeather]                   = useState(null);
   const [showFeatureMenu, setShowFeatureMenu]   = useState(false);
   const [showWheel, setShowWheel]               = useState(false);
@@ -197,7 +248,7 @@ export default function Customer() {
   const featureMenuRef = useRef(null);
   const assistantInputRef = useRef(null);
 
-  // --- Gamification state ---
+
   const [funMode, setFunMode] = useState(() => {
     const stored = localStorage.getItem('bobaFunMode');
     return stored === null ? false : stored === 'true';
@@ -215,58 +266,59 @@ export default function Customer() {
     Number(localStorage.getItem('bobaTextSize') || 0)
   );
 
-  // Footer guide: optional preset chip (null = no extra category subset).
+
   const [ingredientStylePreset, setIngredientStylePreset] = useState(null);
-  // Substring match against drink name and category label (case-insensitive).
+
   const [ingredientSearch, setIngredientSearch] = useState('');
 
-  // Load categories, drinks, and toppings when the component first mounts.
+
+  // Load menu
   useEffect(() => {
     const loadMenu = async () => {
       try {
-        // Start loading and clear any previous error.
+
         setLoadingMenu(true);
         setApiError('');
 
-        // Fetch all three menu resources at the same time.
+
         const [categoriesRes, drinksRes, toppingsRes] = await Promise.all([
           fetch(toApiUrl('/api/customer/categories')),
           fetch(toApiUrl('/api/customer/drinks')),
           fetch(toApiUrl('/api/customer/toppings')),
         ]);
 
-        // If any request failed, stop and throw an error.
+
         if (!categoriesRes.ok || !drinksRes.ok || !toppingsRes.ok) {
           throw new Error('Failed to load menu from server');
         }
 
-        // Parse all three JSON responses at the same time.
+
         const [categoriesData, drinksData, toppingsData] = await Promise.all([
           categoriesRes.json(),
           drinksRes.json(),
           toppingsRes.json(),
         ]);
 
-        // Save the data into state.
+
         setCategories(categoriesData);
         setDrinks(drinksData);
         setToppings(toppingsData);
       } catch (err) {
-        // Log the real error for debugging.
+
         console.error(err);
 
-        // Show a friendly error to the user.
+
         setApiError('Could not load menu data. Please try again.');
       } finally {
-        // Stop loading whether the request succeeded or failed.
+
         setLoadingMenu(false);
       }
     };
-
     loadMenu();
   }, []);
 
-  // Optional header weather (requires `VITE_WEATHER_API_KEY`); fails silently if missing or rate-limited.
+
+  // Weather
   useEffect(() => {
     const fetchWeather = async () => {
       try {
@@ -295,6 +347,110 @@ export default function Customer() {
   useEffect(() => { localStorage.setItem('bobaViewMode', viewMode);     }, [viewMode]);
   useEffect(() => { localStorage.setItem('bobaTextSize', String(textSize)); }, [textSize]);
 
+  // Persist language choice across reloads
+  useEffect(() => {
+    localStorage.setItem('bobaLanguage', language);
+  }, [language]);
+
+  // Translate menu data and UI strings via our backend whenever the language
+  // changes or the menu data lands. English is a no-op (we just clear the
+  // translated state and the UI falls back to the original strings via
+  // `translatedX[id] || x.name`).
+  useEffect(() => {
+    if (language === 'en') {
+      setUiText(DEFAULT_UI_TEXT);
+      setTranslatedCategories({});
+      setTranslatedDrinks({});
+      setTranslatedToppings({});
+      return;
+    }
+
+    // Wait until menu data has loaded so we send everything in one batch
+    if (categories.length === 0 || drinks.length === 0 || toppings.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const translateAll = async () => {
+      // Build one flat array of strings to translate, then slice the response
+      // back into the four shape-specific buckets the UI expects. Order
+      // matters here — we use index offsets to demux the response.
+      const uiKeys = Object.keys(DEFAULT_UI_TEXT);
+      const uiValues = uiKeys.map((k) => DEFAULT_UI_TEXT[k]);
+      const categoryNames = categories.map((c) => c.category_name);
+      const drinkNames = drinks.map((d) => d.drink_name);
+      const toppingNames = toppings.map((t) => t.topping_name);
+
+      const allTexts = [
+        ...uiValues,
+        ...categoryNames,
+        ...drinkNames,
+        ...toppingNames,
+      ];
+
+      try {
+        const target = GOOGLE_TRANSLATE_LANGUAGES[language] || language;
+        const res = await fetch(toApiUrl('/api/translate'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ texts: allTexts, target }),
+        });
+
+        if (!res.ok) {
+          throw new Error(`Translation request failed: ${res.status}`);
+        }
+
+        const data = await res.json();
+        const translations = data.translations;
+
+        if (cancelled) return;
+        if (!Array.isArray(translations) || translations.length !== allTexts.length) {
+          throw new Error('Unexpected translation response shape');
+        }
+
+        let offset = 0;
+
+        const newUiText = {};
+        uiKeys.forEach((key, i) => {
+          newUiText[key] = translations[offset + i];
+        });
+        offset += uiKeys.length;
+
+        const newCategories = {};
+        categories.forEach((c, i) => {
+          newCategories[c.category_id] = translations[offset + i];
+        });
+        offset += categories.length;
+
+        const newDrinks = {};
+        drinks.forEach((d, i) => {
+          newDrinks[d.drink_id] = translations[offset + i];
+        });
+        offset += drinks.length;
+
+        const newToppings = {};
+        toppings.forEach((t, i) => {
+          newToppings[t.topping_id] = translations[offset + i];
+        });
+
+        setUiText(newUiText);
+        setTranslatedCategories(newCategories);
+        setTranslatedDrinks(newDrinks);
+        setTranslatedToppings(newToppings);
+      } catch (err) {
+        console.error('Translation failed, keeping English:', err);
+      }
+    };
+
+    translateAll();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [language, categories, drinks, toppings]);
+
+
   useEffect(() => {
     const closeMenuOnOutsideClick = (event) => {
       if (featureMenuRef.current && !featureMenuRef.current.contains(event.target)) {
@@ -303,15 +459,19 @@ export default function Customer() {
     };
 
     document.addEventListener('mousedown', closeMenuOnOutsideClick);
-    return () => document.removeEventListener('mousedown', closeMenuOnOutsideClick);
+
+    return () => {
+      document.removeEventListener('mousedown', closeMenuOnOutsideClick);
+    };
   }, []);
 
-  // Step 1: category pills. `null` = show every drink returned from the API.
+
+  // Filters
   const filteredDrinks = selectedCategory
     ? drinks.filter((d) => d.category_id === selectedCategory)
     : drinks;
 
-  // Step 2–3: optional footer “style” preset (subset of categories) + free-text name/category search.
+
   const presetCategoryNames = INGREDIENT_STYLE_PRESETS.find(
     (p) => p.id === ingredientStylePreset
   )?.categoryNames;
@@ -325,7 +485,7 @@ export default function Customer() {
     if (ingredientQuery) {
       const name = (d.drink_name || '').toLowerCase();
       const cat = (d.category_name || '').toLowerCase();
-      // Match keyword in either field so "milk tea" hits category or drink titles.
+
       if (!name.includes(ingredientQuery) && !cat.includes(ingredientQuery)) {
         return false;
       }
@@ -333,71 +493,63 @@ export default function Customer() {
     return true;
   });
 
-  // Speaks `text` using the ElevenLabs API via our backend.
-  // Click the same button while it's speaking to stop.
-  const speakText = async (text, id) => {
+  // Speaks `text` using the browser's built-in Web Speech API.
+  // Click the same speaker button while it's speaking to stop.
+  const speakText = (text, id) => {
     if (!text) return;
 
-    // Stop whatever's currently playing
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
-    }
-
-    // If user clicked the same button, treat it as a stop
+    // If user clicked the same button, treat it as stop
     if (speakingId === id) {
+      window.speechSynthesis.cancel();
       setSpeakingId(null);
       return;
     }
 
-    setSpeakingId(id);
+    // Cancel anything currently playing
+    window.speechSynthesis.cancel();
 
-    try {
-      const res = await fetch(toApiUrl('/api/tts'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
+    const utterance = new SpeechSynthesisUtterance(text);
 
-      if (!res.ok) {
-        console.error('TTS request failed:', res.status);
-        setSpeakingId(null);
-        return;
-      }
+    // Prefer high-quality voices when available; fall back gracefully
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice =
+      voices.find((v) => v.name.includes('Samantha')) ||             // macOS
+      voices.find((v) => v.name.includes('Aria')) ||                 // Windows 11
+      voices.find((v) => v.name.includes('Jenny')) ||                // Windows 11
+      voices.find((v) => v.name.includes('Google US English')) ||    // Chrome
+      voices.find((v) => v.lang === 'en-US' && !v.localService) ||   // any cloud en-US
+      voices.find((v) => v.lang === 'en-US') ||                      // any en-US
+      voices[0];
 
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      currentAudioRef.current = audio;
-
-      audio.onended = () => {
-        URL.revokeObjectURL(url);
-        currentAudioRef.current = null;
-        setSpeakingId(null);
-      };
-      audio.onerror = () => {
-        URL.revokeObjectURL(url);
-        currentAudioRef.current = null;
-        setSpeakingId(null);
-      };
-
-      await audio.play();
-    } catch (err) {
-      console.error('TTS playback error:', err);
-      setSpeakingId(null);
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
     }
+
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
+    utterance.onend = () => setSpeakingId(null);
+    utterance.onerror = () => setSpeakingId(null);
+
+    setSpeakingId(id);
+    window.speechSynthesis.speak(utterance);
   };
 
-  // Stop speech if the user navigates away
+  // Pre-load voices on mount (Chrome loads them asynchronously).
+  // Also stop any speech if the user navigates away.
   useEffect(() => {
+    window.speechSynthesis.getVoices();
+    const handleVoicesChanged = () => window.speechSynthesis.getVoices();
+    window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
+
     return () => {
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-      }
+      window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
+      window.speechSynthesis.cancel();
     };
   }, []);
 
-  // Returns a weather-based recommendation reason for a drink, or null if none applies.
+
   const getWeatherRecommendationReason = (drink) => {
     if (!weather) return null;
 
@@ -406,7 +558,7 @@ export default function Customer() {
     const category = drink.category_name?.toLowerCase() || '';
     const name = drink.drink_name?.toLowerCase() || '';
 
-    // Rain takes priority regardless of temp
+
     if (condition.includes('rain')) {
       if (
         category.includes('milk tea') ||
@@ -437,7 +589,7 @@ export default function Customer() {
       }
     }
 
-    // Mild weather (60-80°F) — anything goes, but highlight crowd-pleasers
+
     if (temp > 60 && temp < 80) {
       if (category.includes('milk tea') || category.includes('fruit tea')) {
         return 'A great pick for today';
@@ -447,7 +599,7 @@ export default function Customer() {
     return null;
   };
 
-  /** One-shot toast when an achievement ID is earned for the first time this session. */
+
   const unlockAchievement = (id, icon, text) => {
     setUnlockedAchievements(prev => {
       if (prev.has(id)) return prev;
@@ -457,15 +609,15 @@ export default function Customer() {
     });
   };
 
-  // Open the customization modal for the chosen drink
-  // and reset its customization options to defaults.
+
+  // Modal
   const openModal = (drink) => {
     setModal(drink);
     setCustomization({ sugar: '100', ice: 'NORMAL_ICE', size: 'M', toppings: [] });
     setWizardStep(0);
   };
 
-  // Add or remove a topping from the currently selected toppings list.
+
   const toggleTopping = (id) => {
     setCustomization((prev) => ({
       ...prev,
@@ -475,23 +627,23 @@ export default function Customer() {
     }));
   };
 
-  // Calculate the subtotal for one drink with the chosen toppings and size.
+
+  // Pricing
   const getSubtotal = (drink, selectedToppingIds, size = 'M') => {
     const sizeKey = size && SIZE_MULTIPLIERS[size] != null ? size : 'M';
     const toppingCost = selectedToppingIds.reduce((sum, tid) => {
-      // Find the topping that matches the selected ID.
+
       const t = toppings.find((t) => t.topping_id === tid);
 
-      // Add its price if found.
+
       return sum + (t ? parseFloat(t.topping_price) : 0);
     }, 0);
 
-    // Apply size multiplier to base drink price + topping cost.
     const sizeMultiplier = SIZE_MULTIPLIERS[sizeKey];
-    return (parseFloat(drink.base_price) + toppingCost) * sizeMultiplier;
+    return parseFloat(drink.base_price) * sizeMultiplier + toppingCost;
   };
 
-  // --- Wheel coupon math: eligibility rules differ for %-off, $-off, and “free topping” deals ---
+
   const isDealEligibleForItem = (item, deal) => {
     if (!item || !deal) {
       return false;
@@ -566,7 +718,7 @@ export default function Customer() {
     setPendingWheelDeal(null);
   };
 
-  /** Random segment + CSS rotation; result stored in `unclaimedWheelDeal` after animation ends. */
+
   const spinWheel = () => {
     if (wheelSpinning || wheelHasSpunThisLoad) {
       return;
@@ -601,33 +753,33 @@ export default function Customer() {
     setUnclaimedWheelDeal(null);
   };
 
-  // Add the currently customized drink to the cart.
+
+  // Cart
   const addToCart = () => {
     const total = getSubtotal(modal, customization.toppings, customization.size);
 
     const baseCartItem = {
-      // Use the current timestamp as a simple unique ID.
+
       id: Date.now(),
 
-      // Store the full drink object.
+
       drink: modal,
 
-      // Quantity starts at 1.
+
       qty: 1,
 
-      // Save the chosen customization options.
+
       sweetness_level: customization.sugar,
       ice_level: customization.ice,
       size: customization.size,
       toppings: customization.toppings,
 
-      // Save the total price for one customized drink.
+
       total_price: total,
     };
 
     setCart((prev) => [...prev, baseCartItem]);
 
-    // Close the modal after adding to cart.
 
     if (funMode) {
       setBobaPoints(prev => prev + 10);
@@ -649,11 +801,11 @@ export default function Customer() {
     setModal(null);
   };
 
-  // Remove a cart item by its local ID.
+
   const removeFromCart = (id) =>
     setCart((prev) => prev.filter((i) => i.id !== id));
 
-  // Update quantity of a cart item.
+
   const updateQuantity = (id, newQty) => {
     if (newQty <= 0) {
       removeFromCart(id);
@@ -664,7 +816,7 @@ export default function Customer() {
     ));
   };
 
-  // Calculate the total price of the whole cart.
+
   const cartTotal = cart.reduce((sum, i) => sum + i.total_price * i.qty, 0);
   const discountedCartTotal = cart.reduce(
     (sum, i) => sum + getDiscountedUnitPrice(i) * i.qty,
@@ -674,10 +826,7 @@ export default function Customer() {
     ? cart.filter((item) => isDealEligibleForItem(item, claimedWheelCoupon))
     : [];
 
-  /**
-   * Keep coupon application aligned with the cart: if the user deletes the discounted line
-   * or adds a new eligible drink, auto-move the promo (or queue it in `pendingWheelDeal`).
-   */
+
   useEffect(() => {
     if (!claimedWheelCoupon) {
       return;
@@ -715,22 +864,20 @@ export default function Customer() {
     pendingWheelDeal,
   ]);
 
-  /**
-   * POST `/api/customer/order` with line items matching server expectations
-   * (sweetness / ice enums, topping IDs, discounted `total_price` per line).
-   */
+
+  // Order
   const placeOrder = async () => {
-    // Do nothing if the cart is empty or an order is already being placed.
+
     if (cart.length === 0 || placingOrder) {
       return;
     }
 
     try {
-      // Mark that an order submission is in progress.
+
       setPlacingOrder(true);
       setApiError('');
 
-      // Build the request payload expected by the backend.
+
       const payload = {
         user_id: 1,
         items: cart.map((item) => ({
@@ -739,25 +886,25 @@ export default function Customer() {
           sweetness_level: item.sweetness_level,
           ice_level: item.ice_level,
           drink_size: item.size && ['S', 'M', 'L'].includes(item.size) ? item.size : 'M',
-          drink_unit_price: Number(item.drink.base_price),
+          drink_unit_price: Number(Number(item.total_price).toFixed(2)),
           toppings: item.toppings,
           total_price: Number((getDiscountedUnitPrice(item) * item.qty).toFixed(2)),
         })),
       };
 
-      // Send the order to the server.
+
       const res = await fetch(toApiUrl('/api/customer/order'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      // If the request failed, throw an error.
+
       if (!res.ok) {
         throw new Error('Failed to place order');
       }
 
-      // Clear the cart and show a success message.
+
       setCart([]);
       setClaimedWheelCoupon(null);
       setCouponApplyEnabled(true);
@@ -766,7 +913,7 @@ export default function Customer() {
       setShowCart(false);
       setOrderPlaced(true);
 
-      // Hide the success toast after 4 seconds.
+
       setTimeout(() => setOrderPlaced(false), 4000);
       if (funMode) {
         setBobaPoints(prev => prev + 50);
@@ -783,33 +930,58 @@ export default function Customer() {
         unlockAchievement('firstOrder', '🎮', 'Order Champion!');
       }
     } catch (err) {
-      // Log the real error for debugging.
+
       console.error(err);
 
-      // Show a friendly error to the user.
+
       setApiError('Could not place order. Please try again.');
     } finally {
-      // Mark that order submission has finished.
+
       setPlacingOrder(false);
     }
   };
 
-  // Convert a sugar value into its user-friendly label.
+
   const getSugarLabel = (val) =>
     SUGAR_LEVELS.find((s) => s.value === val)?.label || val;
 
-  // Convert an ice value into its user-friendly label.
+
   const getIceLabel = (val) => {
-    if (val === 'HOT') return 'Hot';
-    return ICE_LEVELS.find((i) => i.value === val)?.label || val;
+    if (val === 'HOT') return uiText.hot || 'Hot';
+    return getIceDisplayLabel(val);
   };
 
-  // Determine the currently selected category's display name.
+  const getIceDisplayLabel = (value) => {
+    if (value === 'NO_ICE') return uiText.noIce || 'No Ice';
+    if (value === 'LESS_ICE') return uiText.lessIce || 'Less Ice';
+    if (value === 'NORMAL_ICE') return uiText.regular || 'Regular';
+    if (value === 'HOT') return uiText.hot || 'Hot';
+    return ICE_LEVELS.find((i) => i.value === value)?.label || value;
+  };
+
+  const getSugarDisplayLabel = (value) => {
+    if (value === '0') return uiText.noSugar || 'No Sugar';
+    if (value === '50') return uiText.littleSugar || 'A Little';
+    if (value === '100') return uiText.fullSweet || 'Full Sweet';
+    if (value === '125') return uiText.extraSweet || 'Extra Sweet';
+    return SUGAR_LEVELS.find((s) => s.value === value)?.label || value;
+  };
+
+  const getToppingDisplayName = (topping) =>
+    translatedToppings[topping.topping_id] || topping.topping_name;
+
+
+  const translateText = async (text) => text;
+
+  const translateBatch = async (texts) => texts;
+
+
   const currentCategoryName =
     selectedCategory === null
-      ? 'All categories'
-      : categories.find((c) => c.category_id === selectedCategory)
-          ?.category_name || 'Selected category';
+      ? uiText.all
+      : translatedCategories[selectedCategory] ||
+        categories.find((c) => c.category_id === selectedCategory)?.category_name ||
+        'Selected category';
 
   const showTouchKeyboard = () => {
     const virtualKeyboard = navigator.virtualKeyboard;
@@ -822,66 +994,66 @@ export default function Customer() {
     }
   };
 
-  // Send a message to the assistant.
-  // If a prompt is passed in, use that; otherwise use the text input value.
+
+  // Assistant
   const sendAssistantMessage = async (prompt) => {
     const messageText = (prompt ?? assistantInput).trim();
 
-    // Do nothing for blank messages or while already waiting on a reply.
+
     if (!messageText || assistantLoading) {
       return;
     }
 
-    // Create the updated chat history including the user's new message.
+
     const nextMessages = [
       ...assistantMessages,
       { role: 'user', content: messageText },
     ];
 
-    // Immediately show the user's message in the UI.
+
     setAssistantMessages(nextMessages);
 
-    // Clear input and reset assistant state.
+
     setAssistantInput('');
     setAssistantLoading(true);
     setAssistantError('');
 
     try {
-      // Send the full conversation to the assistant endpoint.
+
       const response = await fetch(toApiUrl('/api/assistant/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: nextMessages }),
       });
 
-      // Throw an error if the request failed.
+
       if (!response.ok) {
         throw new Error('Assistant request failed');
       }
 
-      // Parse the assistant reply.
+
       const data = await response.json();
 
-      // Append the assistant's reply to the chat.
+
       setAssistantMessages((currentMessages) => [
         ...currentMessages,
         { role: 'assistant', content: data.reply },
       ]);
     } catch (err) {
-      // Log the actual error for debugging.
+
       console.error(err);
 
-      // Show a friendly error message to the user.
+
       setAssistantError(
         'The assistant could not respond right now. Please try again.'
       );
     } finally {
-      // Stop the assistant loading state.
+
       setAssistantLoading(false);
     }
   };
 
-  // --- Layout helpers for accessibility (text scale) and wheel SVG gradient ---
+
   const TEXT_SCALES = [1, 1.25, 1.55];
   const ts = TEXT_SCALES[textSize];
   const wheelGradient = `conic-gradient(${WHEEL_DEALS.map((deal, index) => {
@@ -890,6 +1062,18 @@ export default function Customer() {
     return `${deal.color} ${start}deg ${end}deg`;
   }).join(', ')})`;
 
+  const assistantPlaceholder =
+    language === 'es'
+      ? 'Pregunta sobre el menú...'
+      : language === 'fr'
+      ? 'Demandez sur le menu...'
+      : language === 'hi'
+      ? 'मेनू के बारे में पूछें...'
+      : language === 'zh'
+      ? '询问菜单...'
+      : 'Ask something about the menu or ordering...';
+
+  // Render
   return (
     <div style={s.root}>
       <a href="#drink-grid" className="customer-skip-link" style={s.skipLink}>
@@ -936,12 +1120,13 @@ export default function Customer() {
         }
       `}</style>
 
-      {/* Sticky block: shop chrome + category pills + view controls stay reachable while scrolling drinks */}
+
       <div style={s.navShell}>
         <header style={s.header}>
           <div style={s.headerInner}>
             <div style={s.headerLeft}>
-              <h1 style={s.logo}>🧋 Reveille Boba</h1>
+              <h1 style={s.logo}>🧋 {uiText.title}</h1>
+
               {weather && (
                 <div
                   style={s.weatherChip}
@@ -952,11 +1137,32 @@ export default function Customer() {
                     alt={weather.description}
                     style={{ width: '28px', height: '28px' }}
                   />
-                  <span style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>{weather.temp}°F</span>
-                  <span style={{ fontSize: '0.8rem', opacity: 0.85 }}>{weather.description}</span>
+                  <span style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>
+                    {weather.temp}°F
+                  </span>
+                  <span style={{ fontSize: '0.8rem', opacity: 0.85 }}>
+                    {weather.description}
+                  </span>
                 </div>
               )}
-              <div id="google_translate_element" style={s.translateWidget}></div>
+
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                style={{
+                  padding: '0.4rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  fontWeight: 'bold',
+                }}
+                aria-label="Select language"
+              >
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+                <option value="hi">Hindi</option>
+                <option value="zh">Chinese</option>
+              </select>
             </div>
 
             <div style={s.headerActions}>
@@ -966,172 +1172,119 @@ export default function Customer() {
                   style={s.pointsBadge}
                   className={pointsFlash ? 'points-pop' : ''}
                   onClick={() => setShowAchievements(true)}
-                  aria-label={`Boba Points: ${bobaPoints}. Click to view achievements`}
                 >
                   ⭐ {bobaPoints} pts
                 </button>
               )}
+
               <div style={s.featureMenuWrap} ref={featureMenuRef}>
                 <button
                   type="button"
                   style={s.featureMenuBtn}
                   onClick={() => setShowFeatureMenu((prev) => !prev)}
-                  aria-haspopup="menu"
-                  aria-expanded={showFeatureMenu}
-                  aria-label="Open features menu"
                 >
                   ✨ Features
                 </button>
-                {showFeatureMenu && (
-                  <div style={s.featureDropdown} role="menu" aria-label="Customer feature menu">
-                    <button
-                      type="button"
-                      style={s.featureMenuItem}
-                      role="menuitem"
-                      onClick={() => {
-                        setShowAssistant(true);
-                        setShowFeatureMenu(false);
-                      }}
-                    >
-                      💬 Chatbot
-                    </button>
-                    <button
-                      type="button"
-                      style={s.featureMenuItem}
-                      role="menuitem"
-                      onClick={() => {
-                        setFunMode((prev) => !prev);
-                        setShowFeatureMenu(false);
-                      }}
-                    >
-                      {funMode ? '🎉 Turn Fun Mode Off' : '🎉 Turn Fun Mode On'}
-                    </button>
-                    <button
-                      type="button"
-                      style={s.featureMenuItem}
-                      role="menuitem"
-                      onClick={() => {
-                        setShowWheel(true);
-                        setShowFeatureMenu(false);
-                      }}
-                    >
-                      🎡 Spin the Wheel
-                    </button>
-                    <button
-                      type="button"
-                      style={s.featureMenuItem}
-                      role="menuitem"
-                      onClick={() => {
-                        setShowAllergyGuide(true);
-                        setShowFeatureMenu(false);
-                      }}
-                    >
-                      ⚠️ Allergy Guide
-                    </button>
-                  </div>
-                )}
               </div>
+
               <button
                 type="button"
                 style={s.cartBtn}
                 onClick={() => setShowCart(true)}
-                aria-label={`Open cart with ${cart.length} item${
-                  cart.length === 1 ? '' : 's'
-                }`}
               >
                 🛒 Cart {cart.length > 0 && <span style={s.cartBadge}>{cart.length}</span>}
               </button>
             </div>
           </div>
-        </header>
 
-        <div style={s.categoryBarWrap}>
-          <p style={s.categoryBarLabel} id="category-nav-label">
-            Browse by category
-          </p>
-          <nav style={s.categoryBar} aria-labelledby="category-nav-label">
-            <button
-              style={{ ...s.catBtn, ...(selectedCategory === null ? s.catBtnActive : {}), fontSize: `${0.78 * ts}rem` }}
-              onClick={() => setSelectedCategory(null)}
-              aria-pressed={selectedCategory === null}
-              aria-label="Show all categories"
-            >
-              All
-            </button>
-
-            {categories.map((cat) => (
+          <div style={s.categoryBarWrap}>
+            <p style={s.categoryBarLabel} id="category-nav-label">
+              {uiText.browseByCategory || 'Browse by category'}
+            </p>
+            <nav style={s.categoryBar} aria-labelledby="category-nav-label">
               <button
-                key={cat.category_id}
-                style={{ ...s.catBtn, ...(selectedCategory === cat.category_id ? s.catBtnActive : {}), fontSize: `${0.78 * ts}rem` }}
-                onClick={() => setSelectedCategory(cat.category_id)}
-                aria-pressed={selectedCategory === cat.category_id}
-                aria-label={`Show ${cat.category_name} drinks`}
+                style={{ ...s.catBtn, ...(selectedCategory === null ? s.catBtnActive : {}), fontSize: `${0.78 * ts}rem` }}
+                onClick={() => setSelectedCategory(null)}
+                aria-pressed={selectedCategory === null}
+                aria-label="Show all categories"
               >
-                {categoryEmojis[cat.category_name] || '🍹'} {cat.category_name}
+                {uiText.all}
               </button>
-            ))}
-          </nav>
-        </div>
 
-        {/* Grid vs list + text size (persisted in localStorage) */}
-        <div style={s.controlsBar}>
-          <div style={s.controlsBarInner}>
-            <div style={s.controlCluster}>
-              <span style={s.controlClusterLabel}>Layout</span>
-              <div style={s.viewToggleGroup} role="group" aria-label="View mode">
+              {categories.map((cat) => (
                 <button
-                  style={{ ...s.viewBtn, ...(viewMode === 'grid' ? s.viewBtnActive : {}) }}
-                  onClick={() => setViewMode('grid')}
-                  aria-pressed={viewMode === 'grid'}
-                  aria-label="Grid view"
-                  title="Grid view"
+                  key={cat.category_id}
+                  style={{ ...s.catBtn, ...(selectedCategory === cat.category_id ? s.catBtnActive : {}), fontSize: `${0.78 * ts}rem` }}
+                  onClick={() => setSelectedCategory(cat.category_id)}
+                  aria-pressed={selectedCategory === cat.category_id}
+                  aria-label={`Show ${cat.category_name} drinks`}
                 >
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true">
-                    <rect x="0" y="0" width="7" height="7" rx="1.5" />
-                    <rect x="11" y="0" width="7" height="7" rx="1.5" />
-                    <rect x="0" y="11" width="7" height="7" rx="1.5" />
-                    <rect x="11" y="11" width="7" height="7" rx="1.5" />
-                  </svg>
+                  {categoryEmojis[cat.category_name] || '🍹'} {translatedCategories[cat.category_id] || cat.category_name}
                 </button>
-                <button
-                  style={{ ...s.viewBtn, ...(viewMode === 'list' ? s.viewBtnActive : {}) }}
-                  onClick={() => setViewMode('list')}
-                  aria-pressed={viewMode === 'list'}
-                  aria-label="List view"
-                  title="List view"
-                >
-                  <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true">
-                    <rect x="0" y="1" width="18" height="4" rx="1.5" />
-                    <rect x="0" y="7" width="18" height="4" rx="1.5" />
-                    <rect x="0" y="13" width="18" height="4" rx="1.5" />
-                  </svg>
-                </button>
+              ))}
+            </nav>
+          </div>
+
+
+          <div style={s.controlsBar}>
+            <div style={s.controlsBarInner}>
+              <div style={s.controlCluster}>
+                <span style={s.controlClusterLabel}>Layout</span>
+                <div style={s.viewToggleGroup} role="group" aria-label="View mode">
+                  <button
+                    style={{ ...s.viewBtn, ...(viewMode === 'grid' ? s.viewBtnActive : {}) }}
+                    onClick={() => setViewMode('grid')}
+                    aria-pressed={viewMode === 'grid'}
+                    aria-label="Grid view"
+                    title="Grid view"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true">
+                      <rect x="0" y="0" width="7" height="7" rx="1.5" />
+                      <rect x="11" y="0" width="7" height="7" rx="1.5" />
+                      <rect x="0" y="11" width="7" height="7" rx="1.5" />
+                      <rect x="11" y="11" width="7" height="7" rx="1.5" />
+                    </svg>
+                  </button>
+                  <button
+                    style={{ ...s.viewBtn, ...(viewMode === 'list' ? s.viewBtnActive : {}) }}
+                    onClick={() => setViewMode('list')}
+                    aria-pressed={viewMode === 'list'}
+                    aria-label="List view"
+                    title="List view"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true">
+                      <rect x="0" y="1" width="18" height="4" rx="1.5" />
+                      <rect x="0" y="7" width="18" height="4" rx="1.5" />
+                      <rect x="0" y="13" width="18" height="4" rx="1.5" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div style={s.controlCluster}>
-              <span style={s.controlClusterLabel}>Text</span>
-              <div style={s.sizeGroup} role="group" aria-label="Text size">
-                <button
-                  style={s.sizeBtn}
-                  onClick={() => setTextSize((prev) => Math.max(0, prev - 1))}
-                  aria-label="Decrease text size"
-                  disabled={textSize === 0}
-                >
-                  <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>A</span>
-                </button>
-                <button
-                  style={s.sizeBtn}
-                  onClick={() => setTextSize((prev) => Math.min(2, prev + 1))}
-                  aria-label="Increase text size"
-                  disabled={textSize === 2}
-                >
-                  <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>A</span>
-                </button>
+              <div style={s.controlCluster}>
+                <span style={s.controlClusterLabel}>Text</span>
+                <div style={s.sizeGroup} role="group" aria-label="Text size">
+                  <button
+                    style={s.sizeBtn}
+                    onClick={() => setTextSize((prev) => Math.max(0, prev - 1))}
+                    aria-label="Decrease text size"
+                    disabled={textSize === 0}
+                  >
+                    <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>A</span>
+                  </button>
+                  <button
+                    style={s.sizeBtn}
+                    onClick={() => setTextSize((prev) => Math.min(2, prev + 1))}
+                    aria-label="Increase text size"
+                    disabled={textSize === 2}
+                  >
+                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>A</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </header>
       </div>
 
       <p style={s.visuallyHidden} role="status" aria-live="polite">
@@ -1141,7 +1294,7 @@ export default function Customer() {
         {cart.length} item{cart.length === 1 ? '' : 's'}.
       </p>
 
-      {loadingMenu && <p style={s.statusMessage}>Loading menu...</p>}
+      {loadingMenu && <p style={s.statusMessage}>{uiText.loadingMenu}</p>}
       {apiError && <p style={s.errorMessage}>{apiError}</p>}
 
       <main
@@ -1155,12 +1308,14 @@ export default function Customer() {
             style={s.listCard}
             className={funMode ? 'fun-card' : ''}
             onClick={() => openModal(drink)}
-            aria-label={`${drink.drink_name}, ${drink.category_name}, ${parseFloat(drink.base_price).toFixed(2)} dollars. Open customization.`}
+            aria-label={`${translatedDrinks[drink.drink_id] || drink.drink_name}, ${drink.category_name}, ${parseFloat(drink.base_price).toFixed(2)} dollars. Open customization.`}
           >
             <div style={{ fontSize: `${2.5 * ts}rem`, lineHeight: 1, flexShrink: 0 }}>{categoryEmojis[drink.category_name] || '🍹'}</div>
             <div style={s.listCardInfo}>
-              <div style={{ ...s.drinkName,     fontSize: `${1.05 * ts}rem` }}>{drink.drink_name}</div>
-              <div style={{ ...s.drinkCategory, fontSize: `${0.8  * ts}rem` }}>{drink.category_name}</div>
+              <div style={{ ...s.drinkName,     fontSize: `${1.05 * ts}rem` }}>{translatedDrinks[drink.drink_id] || drink.drink_name}</div>
+              <div style={{ ...s.drinkCategory, fontSize: `${0.8 * ts}rem` }}>
+                {translatedCategories[drink.category_id] || drink.category_name}
+              </div>
             </div>
             <div style={{ ...s.drinkPrice, fontSize: `${1.15 * ts}rem`, marginLeft: 'auto', flexShrink: 0 }}>${parseFloat(drink.base_price).toFixed(2)}</div>
             {getWeatherRecommendationReason(drink) && (<div style={s.weatherRecommendation}> ☁️ {getWeatherRecommendationReason(drink)}</div>)}
@@ -1171,50 +1326,52 @@ export default function Customer() {
             style={s.drinkCard}
             className={funMode ? 'fun-card' : ''}
             onClick={() => openModal(drink)}
-            aria-label={`${drink.drink_name}, ${drink.category_name}, ${parseFloat(
+            aria-label={`${translatedDrinks[drink.drink_id] || drink.drink_name}, ${drink.category_name}, ${parseFloat(
               drink.base_price
             ).toFixed(2)} dollars. Open customization.`}
           >
             <div style={{ ...(funMode ? s.drinkEmojiLarge : s.drinkEmoji), fontSize: `${(funMode ? 3.8 : 2.5) * ts}rem` }}>{categoryEmojis[drink.category_name] || '🍹'}</div>
-            <div style={{ ...s.drinkName,     fontSize: `${0.95 * ts}rem` }}>{drink.drink_name}</div>
-            <div style={{ ...s.drinkCategory, fontSize: `${0.75 * ts}rem` }}>{drink.category_name}</div>
+            <div style={{ ...s.drinkName,     fontSize: `${0.95 * ts}rem` }}>{translatedDrinks[drink.drink_id] || drink.drink_name}</div>
+            <div style={{ ...s.drinkCategory, fontSize: `${0.75 * ts}rem` }}>
+              {translatedCategories[drink.category_id] || drink.category_name}
+            </div>
             <div style={s.drinkPriceRow}>
               <div style={{ ...s.drinkPrice, fontSize: `${1.1 * ts}rem` }}>
                 ${parseFloat(drink.base_price).toFixed(2)}
               </div>
-<span
-  role="button"
-  tabIndex={0}
-  style={s.speakBtn}
-  onClick={(e) => {
-    e.stopPropagation();
-    speakText(
-      `${drink.drink_name}. ${drink.category_name}. ${parseFloat(drink.base_price).toFixed(2)} dollars.`,
-      drink.drink_id
-    );
-  }}
-  onKeyDown={(e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      e.stopPropagation();
-      speakText(
-        `${drink.drink_name}. ${drink.category_name}. ${parseFloat(drink.base_price).toFixed(2)} dollars.`,
-        drink.drink_id
-      );
-    }
-  }}
-  aria-label={`Read ${drink.drink_name} aloud`}
-  title={speakingId === drink.drink_id ? 'Stop' : 'Read aloud'}
->
-  {speakingId === drink.drink_id ? '⏸️' : '🔊'}
-</span>
+              <span
+                role="button"
+                tabIndex={0}
+                style={s.speakBtn}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  speakText(
+                    `${drink.drink_name}. ${drink.category_name}. ${parseFloat(drink.base_price).toFixed(2)} dollars.`,
+                    drink.drink_id
+                  );
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    speakText(
+                      `${drink.drink_name}. ${drink.category_name}. ${parseFloat(drink.base_price).toFixed(2)} dollars.`,
+                      drink.drink_id
+                    );
+                  }
+                }}
+                aria-label={`Read ${drink.drink_name} aloud`}
+                title={speakingId === drink.drink_id ? 'Stop' : 'Read aloud'}
+              >
+                {speakingId === drink.drink_id ? '⏸️' : '🔊'}
+              </span>
             </div>
             {getWeatherRecommendationReason(drink) && (
               <div style={s.weatherRecommendation}> ☁️ {getWeatherRecommendationReason(drink)} </div>
             )}
           </button>
         ))}
-        {/* Shown when category + preset + search intersection is empty (not while loading). */}
+
         {!loadingMenu && !apiError && displayDrinks.length === 0 && (
           <p style={s.emptyFilterMessage}>
             No drinks match your filters. Try another category, clear the style shortcut, or adjust your search.
@@ -1222,7 +1379,7 @@ export default function Customer() {
         )}
       </main>
 
-      {/* Customize drink: standard modal, or 3-step “wizard” when fun mode is on */}
+
       {modal && (
         <div style={s.overlay} onClick={() => setModal(null)}>
           <div
@@ -1237,20 +1394,15 @@ export default function Customer() {
                 <button style={s.wizardCloseBtn} onClick={() => setModal(null)} aria-label="Exit customization">✕</button>
                 <div style={s.wizardHeader}>
                   <div style={s.wizardBigEmoji}>{categoryEmojis[modal.category_name] || '🍹'}</div>
-                  <h2 id="customize-drink-title" style={s.wizardDrinkName}>{modal.drink_name}</h2>
+                  <h2 id="customize-drink-title" style={s.wizardDrinkName}>{translatedDrinks[modal.drink_id] || modal.drink_name}</h2>
                   {wizardStep >= 1 && (
                     <div style={s.wizardSummary} aria-label="Your choices so far">
                       <span style={s.wizardSummaryChip}>
-                        📏 Size {customization.size || 'M'}
+                        {WIZARD_SUGAR[customization.sugar].emoji} {getSugarDisplayLabel(customization.sugar)}
                       </span>
                       {wizardStep >= 2 && (
                         <span style={s.wizardSummaryChip}>
-                          {WIZARD_SUGAR[customization.sugar].emoji} {WIZARD_SUGAR[customization.sugar].label}
-                        </span>
-                      )}
-                      {wizardStep >= 3 && (
-                        <span style={s.wizardSummaryChip}>
-                          {WIZARD_ICE[customization.ice].emoji} {WIZARD_ICE[customization.ice].label}
+                          {WIZARD_ICE[customization.ice].emoji} {getIceDisplayLabel(customization.ice)}
                         </span>
                       )}
                       {customization.toppings.length > 0 && (
@@ -1268,29 +1420,8 @@ export default function Customer() {
                 </div>
                 {wizardStep === 0 && (
                   <div style={s.wizardStep}>
-                    <p style={s.wizardQuestion}>What size? 📏</p>
-                    <div style={s.wizardOptions} role="group" aria-label="Drink size">
-                      {SIZE_LEVELS.map(({ label, value }) => (
-                        <button
-                          key={value}
-                          style={{ ...s.wizardOptBtn, ...(customization.size === value ? s.wizardOptBtnActive : {}) }}
-                          onClick={() => { setCustomization(prev => ({ ...prev, size: value })); setWizardStep(1); }}
-                          aria-pressed={customization.size === value}
-                          aria-label={`Size ${label}`}
-                        >
-                          <span style={s.wizardOptEmoji}>
-                            {value === 'S' ? 'S' : value === 'M' ? 'M' : 'L'}
-                          </span>
-                          <span style={s.wizardOptLabel}>Size {label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {wizardStep === 1 && (
-                  <div style={s.wizardStep}>
-                    <p style={s.wizardQuestion}>How sweet? 🍬</p>
-                    <div style={s.wizardOptions} role="group" aria-label="Sweetness level">
+                    <p style={s.wizardQuestion}>{uiText.howSweet} 🍬</p>
+                    <div style={s.wizardOptions} role="group" aria-label={uiText.sweetness}>
                       {[
                         { value: '0',   emoji: '🚫', label: 'No Sugar'  },
                         { value: '50',  emoji: '🍬', label: 'A Little'  },
@@ -1301,10 +1432,10 @@ export default function Customer() {
                           style={{ ...s.wizardOptBtn, ...(customization.sugar === value ? s.wizardOptBtnActive : {}) }}
                           onClick={() => { setCustomization(prev => ({ ...prev, sugar: value })); setWizardStep(2); }}
                           aria-pressed={customization.sugar === value}
-                          aria-label={`Sweetness: ${label}`}
+                          aria-label={`Sweetness: ${getSugarDisplayLabel(value)}`}
                         >
                           <span style={s.wizardOptEmoji}>{emoji}</span>
-                          <span style={s.wizardOptLabel}>{label}</span>
+                          <span style={s.wizardOptLabel}>{value === 'HOT' || value.includes('ICE') ? getIceDisplayLabel(value) : getSugarDisplayLabel(value)}</span>
                         </button>
                       ))}
                     </div>
@@ -1313,7 +1444,7 @@ export default function Customer() {
                 )}
                 {wizardStep === 2 && (
                   <div style={s.wizardStep}>
-                    <p style={s.wizardQuestion}>{modal.category_name === 'Hot Drinks' ? 'How hot? ☕' : 'How cold? 🧊'}</p>
+                    <p style={s.wizardQuestion}>{modal.category_name === 'Hot Drinks' ? `${uiText.howHot} ☕` : `${uiText.howCold} 🧊`}</p>
                     <div style={s.wizardOptions} role="group" aria-label={modal.category_name === 'Hot Drinks' ? 'Temperature' : 'Ice level'}>
                       {(modal.category_name === 'Hot Drinks' ? [
                         { value: 'HOT', emoji: '☕', label: 'Hot' }
@@ -1327,19 +1458,19 @@ export default function Customer() {
                           style={{ ...s.wizardOptBtn, ...(customization.ice === value ? s.wizardOptBtnActive : {}) }}
                           onClick={() => { setCustomization(prev => ({ ...prev, ice: value })); setWizardStep(3); }}
                           aria-pressed={customization.ice === value}
-                          aria-label={`${modal.category_name === 'Hot Drinks' ? 'Temperature' : 'Ice level'}: ${label}`}
+                          aria-label={`${modal.category_name === 'Hot Drinks' ? uiText.temperature : uiText.iceLevel}: ${getIceDisplayLabel(value)}`}
                         >
                           <span style={s.wizardOptEmoji}>{emoji}</span>
-                          <span style={s.wizardOptLabel}>{label}</span>
+                          <span style={s.wizardOptLabel}>{value === 'HOT' || value.includes('ICE') ? getIceDisplayLabel(value) : getSugarDisplayLabel(value)}</span>
                         </button>
                       ))}
                     </div>
-                    <button style={s.wizardBackBtn} onClick={() => setWizardStep(1)}>← Back</button>
+                    <button style={s.wizardBackBtn} onClick={() => setWizardStep(0)}>← {uiText.back}</button>
                   </div>
                 )}
                 {wizardStep === 3 && (
                   <div style={s.wizardStep}>
-                    <p style={s.wizardQuestion}>Any extras? ✨</p>
+                    <p style={s.wizardQuestion}>{uiText.anyExtras} ✨</p>
                     <div style={s.wizardToppingGrid} role="group" aria-label="Toppings">
                       {toppings.map(t => (
                         <button
@@ -1347,16 +1478,16 @@ export default function Customer() {
                           style={{ ...s.wizardToppingBtn, ...(customization.toppings.includes(t.topping_id) ? s.wizardToppingBtnActive : {}) }}
                           onClick={() => toggleTopping(t.topping_id)}
                           aria-pressed={customization.toppings.includes(t.topping_id)}
-                          aria-label={`${t.topping_name}, add ${parseFloat(t.topping_price).toFixed(2)} dollars`}
+                          aria-label={`${getToppingDisplayName(t)}, add ${parseFloat(t.topping_price).toFixed(2)} dollars`}
                         >
                           <span style={{ fontSize: '1.5rem' }}>🧆</span>
-                          <span>{t.topping_name}</span>
+                          <span>{getToppingDisplayName(t)}</span>
                           <span style={{ fontSize: '0.8rem', opacity: 0.75 }}>+${parseFloat(t.topping_price).toFixed(2)}</span>
                         </button>
                       ))}
                     </div>
                     <div style={s.wizardFooter}>
-                      <button style={s.wizardBackBtn} onClick={() => setWizardStep(2)}>← Back</button>
+                      <button style={s.wizardBackBtn} onClick={() => setWizardStep(1)}>← {uiText.back}</button>
                       <span style={s.wizardTotal}>${getSubtotal(modal, customization.toppings, customization.size).toFixed(2)}</span>
                       <button style={s.wizardAddBtn} className="fun-btn" onClick={addToCart} aria-label={`Add ${modal.drink_name} to cart`}>
                         Add to Cart 🛒
@@ -1367,12 +1498,20 @@ export default function Customer() {
               </>
             ) : (
               <>
+                <button
+                  type="button"
+                  style={s.modalCloseBtn}
+                  onClick={() => setModal(null)}
+                  aria-label="Close customization"
+                >
+                  ✕
+                </button>
                 <div style={{ fontSize: `${3 * ts}rem`, textAlign: 'center', lineHeight: 1, marginBottom: '0.5rem' }}>{categoryEmojis[modal.category_name] || '🍹'}</div>
-                <h2 id="customize-drink-title" style={{ ...s.modalTitle,    fontSize: `${1.4  * ts}rem` }}>{modal.drink_name}</h2>
-                <p                             style={{ ...s.modalCategory, fontSize: `${0.85 * ts}rem` }}>{modal.category_name}</p>
+                <h2 id="customize-drink-title" style={{ ...s.modalTitle,    fontSize: `${1.4  * ts}rem` }}>{translatedDrinks[modal.drink_id] || modal.drink_name}</h2>
+                <p                             style={{ ...s.modalCategory, fontSize: `${0.85 * ts}rem` }}>{translatedCategories[modal.category_id] || modal.category_name}</p>
                 <div style={s.section}>
-                  <p style={{ ...s.sectionLabel, fontSize: `${0.95 * ts}rem` }}>Sweetness Level</p>
-                  <div style={s.optionRow} role="group" aria-label="Sweetness level">
+                  <p style={{ ...s.sectionLabel, fontSize: `${0.95 * ts}rem` }}>{uiText.sweetness}</p>
+                  <div style={s.optionRow} role="group" aria-label={uiText.sweetness}>
                     {SUGAR_LEVELS.map(({ label, value }) => (
                       <button key={value}
                         style={{ ...s.optBtn, ...(customization.sugar === value ? s.optBtnActive : {}), fontSize: `${0.85 * ts}rem` }}
@@ -1384,7 +1523,7 @@ export default function Customer() {
                   </div>
                 </div>
                 <div style={s.section}>
-                  <p style={{ ...s.sectionLabel, fontSize: `${0.95 * ts}rem` }}>Size</p>
+                  <p style={{ ...s.sectionLabel, fontSize: `${0.95 * ts}rem` }}>{uiText.size}</p>
                   <div style={s.optionRow} role="group" aria-label="Size">
                     {SIZE_LEVELS.map(({ label, value }) => (
                       <button key={value}
@@ -1398,7 +1537,7 @@ export default function Customer() {
                 </div>
                 {modal.category_name !== 'Hot Drinks' && (
                   <div style={s.section}>
-                    <p style={{ ...s.sectionLabel, fontSize: `${0.95 * ts}rem` }}>Ice Level</p>
+                    <p style={{ ...s.sectionLabel, fontSize: `${0.95 * ts}rem` }}>{uiText.iceLevel}</p>
                     <div style={s.optionRow} role="group" aria-label="Ice level">
                       {ICE_LEVELS.map(({ label, value }) => (
                         <button key={value}
@@ -1406,34 +1545,34 @@ export default function Customer() {
                           onClick={() => setCustomization(prev => ({ ...prev, ice: value }))}
                           aria-pressed={customization.ice === value}
                           aria-label={`Set ice level to ${label}`}
-                        >{label}</button>
+                        >{getIceDisplayLabel(value)}</button>
                       ))}
                     </div>
                   </div>
                 )}
                 {modal.category_name === 'Hot Drinks' && (
                   <div style={s.section}>
-                    <p style={{ ...s.sectionLabel, fontSize: `${0.95 * ts}rem` }}>Temperature</p>
+                    <p style={{ ...s.sectionLabel, fontSize: `${0.95 * ts}rem` }}>{uiText.temperature}</p>
                     <div style={s.optionRow} role="group" aria-label="Temperature">
                       <button
                         style={{ ...s.optBtn, ...(customization.ice === 'HOT' ? s.optBtnActive : {}), fontSize: `${0.85 * ts}rem` }}
                         onClick={() => setCustomization(prev => ({ ...prev, ice: 'HOT' }))}
                         aria-pressed={customization.ice === 'HOT'}
                         aria-label="Hot temperature"
-                      >Hot</button>
+                      >{uiText.hot}</button>
                     </div>
                   </div>
                 )}
                 <div style={s.section}>
-                  <p style={{ ...s.sectionLabel, fontSize: `${0.95 * ts}rem` }}>Toppings</p>
+                  <p style={{ ...s.sectionLabel, fontSize: `${0.95 * ts}rem` }}>{uiText.toppings}</p>
                   <div style={s.toppingGrid} role="group" aria-label="Toppings">
                     {toppings.map(t => (
                       <button key={t.topping_id}
                         style={{ ...s.toppingBtn, ...(customization.toppings.includes(t.topping_id) ? s.toppingBtnActive : {}), fontSize: `${0.85 * ts}rem` }}
                         onClick={() => toggleTopping(t.topping_id)}
                         aria-pressed={customization.toppings.includes(t.topping_id)}
-                        aria-label={`Add ${t.topping_name} topping`}
-                      >{t.topping_name} (+${parseFloat(t.topping_price).toFixed(2)})</button>
+                        aria-label={`Add ${getToppingDisplayName(t)} topping`}
+                      >{getToppingDisplayName(t)} (+${parseFloat(t.topping_price).toFixed(2)})</button>
                     ))}
                   </div>
                 </div>
@@ -1447,7 +1586,7 @@ export default function Customer() {
         </div>
       )}
 
-      {/* Cart drawer + narrow coupon panel (apply / pick line item) */}
+
       {showCart && (
         <div style={s.overlay} onClick={() => setShowCart(false)}>
           <div style={s.cartOverlayContent} onClick={(e) => e.stopPropagation()}>
@@ -1457,12 +1596,13 @@ export default function Customer() {
               aria-modal="true"
               aria-labelledby="cart-title"
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={s.cartHeader}>
                 <h2 id="cart-title" style={s.cartTitle}>
                   Your Order
                 </h2>
                 <button
-                  style={{ ...s.removeBtn, position: 'static', margin: 0 }}
+                  type="button"
+                  style={s.cartCloseBtn}
                   onClick={() => setShowCart(false)}
                   aria-label="Close cart"
                 >
@@ -1615,7 +1755,7 @@ export default function Customer() {
         </div>
       )}
 
-      {/* Gamified discount picker: one spin per page load; claim wires into `claimedWheelCoupon` */}
+
       {showWheel && (
         <div style={s.overlay} onClick={() => setShowWheel(false)}>
           <div
@@ -1709,7 +1849,7 @@ export default function Customer() {
         </div>
       )}
 
-      {/* Short confirmation after successful POST to order API */}
+
       {orderPlaced && (
         <div style={s.toast} role="status" aria-live="polite">
           ✅ Order placed! Thank you!
@@ -1726,7 +1866,7 @@ export default function Customer() {
         </div>
       )}
 
-      {/* Fun-mode achievement list overlay (state exists for future header entry; same dialog pattern as cart) */}
+
       {showAchievements && (
         <div style={s.overlay} onClick={() => setShowAchievements(false)}>
           <div
@@ -1762,7 +1902,7 @@ export default function Customer() {
         </div>
       )}
 
-      {/* Static educational copy — not a substitute for staff allergen protocols */}
+
       {showAllergyGuide && (
         <div style={s.overlay} onClick={() => setShowAllergyGuide(false)}>
           <div
@@ -1819,7 +1959,7 @@ export default function Customer() {
         </div>
       )}
 
-      {/* OpenRouter-backed chat: sends recent messages to `/api/assistant/chat` */}
+
       {showAssistant && (
         <div
           style={s.assistantOverlay}
@@ -1835,7 +1975,7 @@ export default function Customer() {
             <div style={s.assistantHeader}>
               <div>
                 <h2 id="assistant-title" style={s.assistantTitle}>
-                  Reveille Boba Helper
+                  {uiText.helperTitle}
                 </h2>
               </div>
 
@@ -1849,7 +1989,7 @@ export default function Customer() {
               </button>
             </div>
             <p style={s.assistantDescription}>
-              Ask about menu items, toppings, pricing, or ordering steps.
+              {uiText.helperDescription}
             </p>
             <div style={s.assistantQuickRow}>
               {assistantQuickPrompts.map((prompt) => (
@@ -1885,7 +2025,7 @@ export default function Customer() {
                     ...s.assistantMessageBot,
                   }}
                 >
-                  Thinking...
+                  {uiText.helperThinking}
                 </div>
               )}
             </div>
@@ -1905,7 +2045,6 @@ export default function Customer() {
                 onChange={(event) => setAssistantInput(event.target.value)}
                 onFocus={showTouchKeyboard}
                 onClick={showTouchKeyboard}
-                placeholder="Ask something about the menu or ordering..."
                 inputMode="text"
                 enterKeyHint="send"
               />
@@ -1925,13 +2064,14 @@ export default function Customer() {
   );
 }
 
-// --- Reveille Boba palette (shared look with portal / menu board) ---
+
 const BROWN = '#4a2c0a';
 const CREAM = '#fdf6ec';
 const ACCENT = '#c8773a';
 const LIGHT = '#fff8f0';
 
-/** Single inline style map for this page (no CSS modules) to keep the file self-contained. */
+
+// Styles
 const s = {
   root:             { position: 'relative', minHeight: '100vh', background: CREAM, fontFamily: "'Georgia', serif", color: BROWN },
   skipLink: {
@@ -2078,7 +2218,38 @@ const s = {
   },
   weatherRecommendation: { marginTop: '0.4rem', background: '#e8f4ff', color: '#2b4a60', borderRadius: '999px', padding: '0.25rem 0.55rem', fontSize: '0.72rem', fontWeight: 'bold'},
   overlay:          { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 },
-  modalBox:         { background: '#fff', borderRadius: '20px', padding: '2rem', width: '90%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' },
+  modalBox: {
+    position: 'relative',
+    background: '#fff',
+    borderRadius: '20px',
+    padding: '2rem',
+    width: '90%',
+    maxWidth: '480px',
+    maxHeight: '90vh',
+    overflowY: 'auto',
+  },
+  /** Regular-mode customize modal: top-right dismiss (fun mode uses wizard close on the left). */
+  modalCloseBtn: {
+    position: 'absolute',
+    top: '0.85rem',
+    right: '0.85rem',
+    zIndex: 2,
+    border: 'none',
+    background: '#f3e6d8',
+    color: BROWN,
+    borderRadius: '50%',
+    width: '2.25rem',
+    height: '2.25rem',
+    fontSize: '1.05rem',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    lineHeight: 1,
+    fontFamily: 'inherit',
+    boxShadow: '0 1px 4px rgba(74,44,10,0.12)',
+  },
   modalTitle:       { fontSize: '1.4rem', fontWeight: 'bold', color: BROWN, textAlign: 'center', margin: '0.5rem 0 0.25rem' },
   modalCategory:    { fontSize: '0.85rem', color: '#999', textAlign: 'center', marginBottom: '1.5rem', textTransform: 'uppercase', letterSpacing: '0.08em' },
   section:          { marginBottom: '1.25rem' },
@@ -2098,7 +2269,33 @@ const s = {
   couponDrawer:     { background: '#fff', borderRadius: '20px', padding: '1.3rem', width: '90%', maxWidth: '260px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 6px 20px rgba(0,0,0,0.12)', display: 'flex', flexDirection: 'column', gap: '0.6rem' },
   couponTitle:      { fontSize: '1.2rem', fontWeight: 'bold', color: BROWN, margin: 0 },
   couponEmpty:      { margin: 0, color: '#7a5c3b', fontSize: '0.9rem', lineHeight: 1.35 },
-  cartTitle:        { fontSize: '1.4rem', fontWeight: 'bold', color: BROWN, marginBottom: '1.5rem' },
+  cartHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: '0.75rem',
+    marginBottom: '1.25rem',
+  },
+  cartTitle: { fontSize: '1.4rem', fontWeight: 'bold', color: BROWN, margin: 0, flex: 1, minWidth: 0 },
+  /** Closes the cart drawer (checkout panel). */
+  cartCloseBtn: {
+    flexShrink: 0,
+    border: 'none',
+    background: '#f3e6d8',
+    color: BROWN,
+    borderRadius: '50%',
+    width: '2.25rem',
+    height: '2.25rem',
+    fontSize: '1.05rem',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    lineHeight: 1,
+    fontFamily: 'inherit',
+    boxShadow: '0 1px 4px rgba(74,44,10,0.12)',
+  },
   emptyCart:        { color: '#999', textAlign: 'center', padding: '2rem 0' },
   cartItem:         { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0.75rem 0', borderBottom: '1px solid #f0e0cc' },
   cartItemInfo:     { flex: 1 },
@@ -2243,7 +2440,7 @@ const s = {
   },
   listCard:         { background: '#fff', border: '2px solid #e8d5b7', borderRadius: '16px', padding: '1rem 1.25rem', cursor: 'pointer', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '1rem', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(74,44,10,0.08)', textAlign: 'left', width: '100%' },
   listCardInfo:     { display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: 1, minWidth: 0 },
-  // --- Bottom ingredient guide (Customer.jsx footer) ---
+
   emptyFilterMessage: {
     gridColumn: '1 / -1',
     width: '100%',
