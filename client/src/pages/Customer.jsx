@@ -61,11 +61,11 @@ const SIZE_LEVELS = [
   { label: 'L', value: 'L' },
 ];
 
-// Size price multipliers: menu base_price is treated as MEDIUM; S/L scale only the drink, not toppings.
+
 const SIZE_MULTIPLIERS = {
-  S: 0.8,
-  M: 1.0,
-  L: 1.2,
+  'S': 0.8,
+  'M': 1.0,
+  'L': 1.2,
 };
 
 
@@ -204,7 +204,6 @@ export default function Customer() {
   const [customization, setCustomization] = useState({
     sugar: '100',
     ice: 'NORMAL_ICE',
-    size: 'M',
     toppings: [],
   });
 
@@ -630,7 +629,6 @@ export default function Customer() {
 
   // Pricing
   const getSubtotal = (drink, selectedToppingIds, size = 'M') => {
-    const sizeKey = size && SIZE_MULTIPLIERS[size] != null ? size : 'M';
     const toppingCost = selectedToppingIds.reduce((sum, tid) => {
 
       const t = toppings.find((t) => t.topping_id === tid);
@@ -639,8 +637,9 @@ export default function Customer() {
       return sum + (t ? parseFloat(t.topping_price) : 0);
     }, 0);
 
-    const sizeMultiplier = SIZE_MULTIPLIERS[sizeKey];
-    return parseFloat(drink.base_price) * sizeMultiplier + toppingCost;
+
+    const sizeMultiplier = SIZE_MULTIPLIERS[size] || 1.0;
+    return (parseFloat(drink.base_price) + toppingCost) * sizeMultiplier;
   };
 
 
@@ -885,8 +884,7 @@ export default function Customer() {
           qty: item.qty,
           sweetness_level: item.sweetness_level,
           ice_level: item.ice_level,
-          drink_size: item.size && ['S', 'M', 'L'].includes(item.size) ? item.size : 'M',
-          drink_unit_price: Number(Number(item.total_price).toFixed(2)),
+          drink_unit_price: Number(item.drink.base_price),
           toppings: item.toppings,
           total_price: Number((getDiscountedUnitPrice(item) * item.qty).toFixed(2)),
         })),
@@ -1413,8 +1411,8 @@ export default function Customer() {
                     </div>
                   )}
                 </div>
-                <div style={s.wizardDots} aria-label={`Step ${wizardStep + 1} of 4`}>
-                  {[0, 1, 2, 3].map(i => (
+                <div style={s.wizardDots} aria-label={`Step ${wizardStep + 1} of 3`}>
+                  {[0, 1, 2].map(i => (
                     <span key={i} style={{ ...s.wizardDot, ...(i === wizardStep ? s.wizardDotActive : {}) }} />
                   ))}
                 </div>
@@ -1430,7 +1428,7 @@ export default function Customer() {
                         <button
                           key={value}
                           style={{ ...s.wizardOptBtn, ...(customization.sugar === value ? s.wizardOptBtnActive : {}) }}
-                          onClick={() => { setCustomization(prev => ({ ...prev, sugar: value })); setWizardStep(2); }}
+                          onClick={() => { setCustomization(prev => ({ ...prev, sugar: value })); setWizardStep(1); }}
                           aria-pressed={customization.sugar === value}
                           aria-label={`Sweetness: ${getSugarDisplayLabel(value)}`}
                         >
@@ -1439,10 +1437,9 @@ export default function Customer() {
                         </button>
                       ))}
                     </div>
-                    <button style={s.wizardBackBtn} onClick={() => setWizardStep(0)}>← Back</button>
                   </div>
                 )}
-                {wizardStep === 2 && (
+                {wizardStep === 1 && (
                   <div style={s.wizardStep}>
                     <p style={s.wizardQuestion}>{modal.category_name === 'Hot Drinks' ? `${uiText.howHot} ☕` : `${uiText.howCold} 🧊`}</p>
                     <div style={s.wizardOptions} role="group" aria-label={modal.category_name === 'Hot Drinks' ? 'Temperature' : 'Ice level'}>
@@ -1456,7 +1453,7 @@ export default function Customer() {
                         <button
                           key={value}
                           style={{ ...s.wizardOptBtn, ...(customization.ice === value ? s.wizardOptBtnActive : {}) }}
-                          onClick={() => { setCustomization(prev => ({ ...prev, ice: value })); setWizardStep(3); }}
+                          onClick={() => { setCustomization(prev => ({ ...prev, ice: value })); setWizardStep(2); }}
                           aria-pressed={customization.ice === value}
                           aria-label={`${modal.category_name === 'Hot Drinks' ? uiText.temperature : uiText.iceLevel}: ${getIceDisplayLabel(value)}`}
                         >
@@ -1468,7 +1465,7 @@ export default function Customer() {
                     <button style={s.wizardBackBtn} onClick={() => setWizardStep(0)}>← {uiText.back}</button>
                   </div>
                 )}
-                {wizardStep === 3 && (
+                {wizardStep === 2 && (
                   <div style={s.wizardStep}>
                     <p style={s.wizardQuestion}>{uiText.anyExtras} ✨</p>
                     <div style={s.wizardToppingGrid} role="group" aria-label="Toppings">
@@ -2045,6 +2042,7 @@ export default function Customer() {
                 onChange={(event) => setAssistantInput(event.target.value)}
                 onFocus={showTouchKeyboard}
                 onClick={showTouchKeyboard}
+                placeholder={assistantPlaceholder}
                 inputMode="text"
                 enterKeyHint="send"
               />

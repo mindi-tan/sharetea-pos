@@ -28,7 +28,6 @@ router.get('/orders', async (req, res) => {
         oi.qty,
         oi.sweetness_level,
         oi.ice_level,
-        oi.drink_size,
         COALESCE(
           json_agg(t.topping_name) FILTER (WHERE t.topping_name IS NOT NULL),
           '[]'
@@ -38,7 +37,7 @@ router.get('/orders', async (req, res) => {
       LEFT JOIN order_item_topping oit ON oi.order_item_id = oit.order_item_id
       LEFT JOIN topping t ON oit.topping_id = t.topping_id
       WHERE oi.order_id = ANY($1)
-      GROUP BY oi.order_id, oi.order_item_id, d.drink_name, oi.qty, oi.sweetness_level, oi.ice_level, oi.drink_size
+      GROUP BY oi.order_id, oi.order_item_id, d.drink_name, oi.qty, oi.sweetness_level, oi.ice_level
       ORDER BY oi.order_item_id ASC
     `, [orderIds]);
 

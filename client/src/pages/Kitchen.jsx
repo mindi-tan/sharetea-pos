@@ -214,8 +214,6 @@ export default function Kitchen() {
                         <span style={s.drinkName}>{item.drink_name}</span>
                       </div>
                       <div style={s.itemMeta}>
-                        {`Size ${item.drink_size ?? 'M'}`}
-                        <span style={s.metaSep}>·</span>
                         {SUGAR_LABEL[item.sweetness_level] || item.sweetness_level}
                         <span style={s.metaSep}>·</span>
                         {ICE_LABEL[item.ice_level] || item.ice_level}

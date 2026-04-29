@@ -224,18 +224,6 @@ const s = {
   priceHint: { color: ACCENT, fontWeight: 'bold' },
 };
 
-function formatSizes(priceStr) {
-  const base = Number(priceStr.replace('$', ''));
-
-  if (Number.isNaN(base)) return priceStr;
-
-  const small = (base * 0.8).toFixed(2);
-  const medium = base.toFixed(2);
-  const large = (base * 1.2).toFixed(2);
-
-  return `S $${small} / M $${medium} / L $${large}`;
-}
-
 /**
  * Renders one MENU_SECTIONS entry: accessible heading + list of price lines.
  * @param {{ section: { name: string; emoji: string; items: string[] } }} props
@@ -247,25 +235,11 @@ function Column({ section }) {
         {section.emoji} {section.name}
       </h2>
       <ul style={s.list}>
-        {section.items.map((text) => {
-          const [name, price] = text.split(' — ');
-
-          return (
-            <li key={text} style={s.line}>
-              <div style={{ fontWeight: 600 }}>{name}</div>
-
-              <div
-                style={{
-                  fontSize: '0.7em',
-                  color: '#6b4b2c',
-                  marginTop: '0.1rem',
-                }}
-              >
-                {formatSizes(price)}
-              </div>
-            </li>
-          );
-        })}
+        {section.items.map((text) => (
+          <li key={text} style={s.line}>
+            {text}
+          </li>
+        ))}
       </ul>
     </section>
   );
@@ -304,7 +278,7 @@ export default function MenuBoard() {
           {TOPPINGS_LINE}
         </div>
         <p style={s.footnote}>
-          Sweetness <span style={s.priceHint}>0% / 50% / 100% / 125%</span> and ice{' '}
+          Sweetness <span style={s.priceHint}>0% / 50% / 100%</span> and ice{' '}
           <span style={s.priceHint}>no / less / regular</span> when ordering.
         </p>
       </footer>
