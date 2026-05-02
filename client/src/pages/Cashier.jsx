@@ -217,6 +217,39 @@ export default function Cashier() {
     setTicketItems((prev) => prev.filter((item) => item.id !== itemId));
   };
 
+  /** Unit price (base + toppings) for one drink on a ticket line — used when changing qty in the ticket. */
+  const getLineUnitPrice = (item) => getSingleDrinkPrice(item.drink, item.toppings);
+
+  const incrementTicketQty = (itemId) => {
+    setTicketItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== itemId) return item;
+        const unit = getLineUnitPrice(item);
+        const q = item.qty + 1;
+        return {
+          ...item,
+          qty: q,
+          total_price: Number((unit * q).toFixed(2)),
+        };
+      })
+    );
+  };
+
+  const decrementTicketQty = (itemId) => {
+    setTicketItems((prev) => {
+      const row = prev.find((i) => i.id === itemId);
+      if (!row) return prev;
+      if (row.qty <= 1) {
+        return prev.filter((i) => i.id !== itemId);
+      }
+      const unit = getLineUnitPrice(row);
+      const q = row.qty - 1;
+      return prev.map((i) =>
+        i.id === itemId ? { ...i, qty: q, total_price: Number((unit * q).toFixed(2)) } : i
+      );
+    });
+  };
+
   const clearTicket = () => {
     setTicketItems([]);
     setSelectedDrink(null);
@@ -540,10 +573,8 @@ export default function Cashier() {
               {ticketItems.map((item) => (
                 <div key={item.id} style={styles.ticketItem}>
                   <div style={styles.ticketItemTop}>
-                    <div>
-                      <div style={styles.ticketItemName}>
-                        {item.qty} x {item.drink.drink_name}
-                      </div>
+                    <div style={styles.ticketItemLeftCol}>
+                      <div style={styles.ticketItemName}>{item.drink.drink_name}</div>
                       <div style={styles.ticketItemMeta}>
                         {getSugarLabel(item.sweetness_level)} sweet, {getIceLabel(item.ice_level)}
                       </div>
@@ -556,6 +587,27 @@ export default function Cashier() {
 
                     <div style={styles.ticketItemRight}>
                       <div style={styles.ticketItemPrice}>${Number(item.total_price).toFixed(2)}</div>
+                      <div style={styles.ticketQtyRow} aria-label="Line quantity">
+                        <button
+                          type="button"
+                          style={styles.ticketQtyBtn}
+                          onClick={() => decrementTicketQty(item.id)}
+                          aria-label={`Decrease quantity of ${item.drink.drink_name}`}
+                        >
+                          −
+                        </button>
+                        <span style={styles.ticketQtyValue} aria-live="polite">
+                          {item.qty}
+                        </span>
+                        <button
+                          type="button"
+                          style={styles.ticketQtyBtn}
+                          onClick={() => incrementTicketQty(item.id)}
+                          aria-label={`Increase quantity of ${item.drink.drink_name}`}
+                        >
+                          +
+                        </button>
+                      </div>
                       <button
                         type="button"
                         style={styles.removeButton}
@@ -1198,14 +1250,46 @@ const styles = {
     color: MUTED,
     fontSize: '0.7rem',
   },
+  ticketItemLeftCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  ticketQtyRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: '0.45rem',
+  },
+  ticketQtyBtn: {
+    width: '2.1rem',
+    height: '2.1rem',
+    borderRadius: '6px',
+    border: `1px solid ${BORDER}`,
+    background: WHITE,
+    color: TEXT,
+    fontSize: '1.05rem',
+    fontWeight: 800,
+    cursor: 'pointer',
+    lineHeight: 1,
+  },
+  ticketQtyValue: {
+    minWidth: '1.6rem',
+    textAlign: 'center',
+    fontWeight: 800,
+    fontSize: '0.9rem',
+  },
   ticketItemRight: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: '0.35rem',
+    minWidth: '118px',
     textAlign: 'right',
-    minWidth: '85px',
   },
   ticketItemPrice: {
     fontWeight: 800,
     color: BLUE,
-    marginBottom: '0.35rem',
+    marginBottom: 0,
   },
   removeButton: {
     border: 'none',

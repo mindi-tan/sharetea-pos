@@ -1138,7 +1138,7 @@ export default function Customer() {
                   <span style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>
                     {weather.temp}°F
                   </span>
-                  <span style={{ fontSize: '0.8rem', opacity: 0.85 }}>
+                  <span style={{ fontSize: '0.8rem', color: '#fefcf8' }}>
                     {weather.description}
                   </span>
                 </div>
@@ -1150,8 +1150,10 @@ export default function Customer() {
                 style={{
                   padding: '0.4rem',
                   borderRadius: '8px',
-                  border: 'none',
+                  border: `2px solid rgba(255,255,255,0.35)`,
                   fontWeight: 'bold',
+                  background: '#fff',
+                  color: BROWN,
                 }}
                 aria-label="Select language"
               >
@@ -1180,9 +1182,60 @@ export default function Customer() {
                   type="button"
                   style={s.featureMenuBtn}
                   onClick={() => setShowFeatureMenu((prev) => !prev)}
+                  aria-haspopup="true"
+                  aria-expanded={showFeatureMenu}
                 >
                   ✨ Features
                 </button>
+
+                {showFeatureMenu && (
+                  <div style={s.featureDropdown} role="menu">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      style={s.featureMenuItem}
+                      onClick={() => {
+                        setShowFeatureMenu(false);
+                        setShowAssistant(true);
+                      }}
+                    >
+                      💬 Ask Assistant
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      style={s.featureMenuItem}
+                      onClick={() => {
+                        setShowFeatureMenu(false);
+                        setShowWheel(true);
+                      }}
+                    >
+                      🎡 Spin the Wheel
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      style={s.featureMenuItem}
+                      onClick={() => {
+                        setShowFeatureMenu(false);
+                        setShowAllergyGuide(true);
+                      }}
+                    >
+                      ⚠️ Allergy Guide
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      style={s.featureMenuItem}
+                      onClick={() => {
+                        setFunMode((prev) => !prev);
+                        setShowFeatureMenu(false);
+                      }}
+                    >
+                      🎮 {funMode ? 'Disable Fun Mode' : 'Enable Fun Mode'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               <button
@@ -1479,7 +1532,7 @@ export default function Customer() {
                         >
                           <span style={{ fontSize: '1.5rem' }}>🧆</span>
                           <span>{getToppingDisplayName(t)}</span>
-                          <span style={{ fontSize: '0.8rem', opacity: 0.75 }}>+${parseFloat(t.topping_price).toFixed(2)}</span>
+                          <span style={{ fontSize: '0.8rem', color: PRICE_TEXT }}>+${parseFloat(t.topping_price).toFixed(2)}</span>
                         </button>
                       ))}
                     </div>
@@ -2066,7 +2119,14 @@ export default function Customer() {
 const BROWN = '#4a2c0a';
 const CREAM = '#fdf6ec';
 const ACCENT = '#c8773a';
+/** Filled buttons / white text (~WCAG AA for typical label sizes when bold). */
+const ACCENT_FILL = '#9a3412';
 const LIGHT = '#fff8f0';
+/** WCAG 2 AA: ~7:1 vs white for normal body text */
+const TEXT_MUTED = '#4a4a4a';
+const TEXT_SECONDARY = '#5c5c5c';
+/** Price / emphasis on white cards (darker than ACCENT for readable text) */
+const PRICE_TEXT = '#3d2914';
 
 
 // Styles
@@ -2122,12 +2182,12 @@ const s = {
   visuallyHidden:   { position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 },
   statusMessage:    { margin: '0.75rem auto 0', padding: '0 1.25rem', maxWidth: '1200px', color: BROWN, fontSize: '0.95rem' },
   errorMessage:     { margin: '0.75rem auto 0', padding: '0 1.25rem', maxWidth: '1200px', color: '#b00020', fontSize: '0.95rem', fontWeight: 'bold' },
-  cartBtn:          { background: ACCENT, color: '#fff', border: 'none', borderRadius: '50px', padding: '0.55rem 1.15rem', fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 'bold', fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  cartBtn:          { background: ACCENT_FILL, color: '#fff', border: 'none', borderRadius: '50px', padding: '0.55rem 1.15rem', fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 'bold', fontFamily: 'inherit', whiteSpace: 'nowrap' },
   featureMenuWrap:  { position: 'relative' },
   featureMenuBtn:   { background: '#fff', color: BROWN, border: 'none', borderRadius: '50px', padding: '0.5rem 0.95rem', fontSize: '0.88rem', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontFamily: 'inherit', whiteSpace: 'nowrap' },
   featureDropdown:  { position: 'absolute', top: 'calc(100% + 0.45rem)', right: 0, minWidth: '220px', background: '#fff', border: '1px solid #e8d5b7', borderRadius: '12px', boxShadow: '0 8px 20px rgba(0,0,0,0.18)', padding: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', zIndex: 150 },
   featureMenuItem:  { border: 'none', background: '#fff8f0', color: BROWN, borderRadius: '9px', padding: '0.6rem 0.7rem', fontSize: '0.9rem', fontWeight: 'bold', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' },
-  cartBadge:        { background: '#fff', color: ACCENT, borderRadius: '50%', padding: '0 6px', fontSize: '0.8rem', fontWeight: 'bold' },
+  cartBadge:        { background: '#fff', color: BROWN, borderRadius: '50%', padding: '0 6px', fontSize: '0.8rem', fontWeight: 'bold' },
   categoryBarWrap: {
     background: LIGHT,
     borderBottom: '1px solid #e8d5b7',
@@ -2142,7 +2202,7 @@ const s = {
     fontWeight: 'bold',
     textTransform: 'uppercase',
     letterSpacing: '0.14em',
-    color: '#7a5c3b',
+    color: '#3d2914',
   },
   categoryBar: {
     display: 'flex',
@@ -2191,8 +2251,8 @@ const s = {
   drinkCard:        { background: '#fff', border: '2px solid #e8d5b7', borderRadius: '16px', padding: '1.5rem 1rem', cursor: 'pointer', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(74,44,10,0.08)' },
   drinkEmoji:       { fontSize: '2.5rem' },
   drinkName:        { fontSize: '0.95rem', fontWeight: 'bold', color: BROWN, lineHeight: 1.3 },
-  drinkCategory:    { fontSize: '0.75rem', color: '#999', textTransform: 'uppercase', letterSpacing: '0.08em' },
-  drinkPrice:       { fontSize: '1.1rem', color: ACCENT, fontWeight: 'bold', marginTop: '0.25rem' },
+  drinkCategory:    { fontSize: '0.75rem', color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: '0.08em' },
+  drinkPrice:       { fontSize: '1.1rem', color: PRICE_TEXT, fontWeight: 'bold', marginTop: '0.25rem' },
   drinkPriceRow: {
     display: 'flex',
     alignItems: 'center',
@@ -2249,24 +2309,24 @@ const s = {
     boxShadow: '0 1px 4px rgba(74,44,10,0.12)',
   },
   modalTitle:       { fontSize: '1.4rem', fontWeight: 'bold', color: BROWN, textAlign: 'center', margin: '0.5rem 0 0.25rem' },
-  modalCategory:    { fontSize: '0.85rem', color: '#999', textAlign: 'center', marginBottom: '1.5rem', textTransform: 'uppercase', letterSpacing: '0.08em' },
+  modalCategory:    { fontSize: '0.85rem', color: TEXT_MUTED, textAlign: 'center', marginBottom: '1.5rem', textTransform: 'uppercase', letterSpacing: '0.08em' },
   section:          { marginBottom: '1.25rem' },
   sectionLabel:     { fontWeight: 'bold', color: BROWN, marginBottom: '0.5rem', fontSize: '0.95rem' },
-  toppingNote:      { color: '#aaa', fontWeight: 'normal', fontSize: '0.8rem' },
+  toppingNote:      { color: TEXT_SECONDARY, fontWeight: 'normal', fontSize: '0.8rem' },
   optionRow:        { display: 'flex', flexWrap: 'wrap', gap: '0.5rem' },
   optBtn:           { border: '2px solid #e8d5b7', background: '#fff', color: BROWN, borderRadius: '50px', padding: '0.4rem 0.9rem', fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'inherit' },
   optBtnActive:     { background: BROWN, color: '#fff', border: `2px solid ${BROWN}` },
   toppingGrid:      { display: 'flex', flexWrap: 'wrap', gap: '0.5rem' },
   toppingBtn:       { border: '2px solid #e8d5b7', background: '#fff', color: BROWN, borderRadius: '50px', padding: '0.4rem 0.9rem', fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'inherit' },
-  toppingBtnActive: { background: ACCENT, color: '#fff', border: `2px solid ${ACCENT}` },
+  toppingBtnActive: { background: ACCENT_FILL, color: '#fff', border: `2px solid ${ACCENT_FILL}` },
   modalFooter:      { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #e8d5b7' },
-  modalTotal:       { fontSize: '1.4rem', fontWeight: 'bold', color: ACCENT },
+  modalTotal:       { fontSize: '1.4rem', fontWeight: 'bold', color: PRICE_TEXT },
   addBtn:           { background: BROWN, color: '#fff', border: 'none', borderRadius: '50px', padding: '0.7rem 1.8rem', fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'bold' },
   cartOverlayContent: { display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: '1rem', width: '100%', padding: '1rem', boxSizing: 'border-box', flexWrap: 'wrap' },
   cartDrawer:       { background: '#fff', borderRadius: '20px', padding: '2rem', width: '90%', maxWidth: '420px', maxHeight: '90vh', overflowY: 'auto' },
   couponDrawer:     { background: '#fff', borderRadius: '20px', padding: '1.3rem', width: '90%', maxWidth: '260px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 6px 20px rgba(0,0,0,0.12)', display: 'flex', flexDirection: 'column', gap: '0.6rem' },
   couponTitle:      { fontSize: '1.2rem', fontWeight: 'bold', color: BROWN, margin: 0 },
-  couponEmpty:      { margin: 0, color: '#7a5c3b', fontSize: '0.9rem', lineHeight: 1.35 },
+  couponEmpty:      { margin: 0, color: '#3d2914', fontSize: '0.9rem', lineHeight: 1.35 },
   cartHeader: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -2294,20 +2354,20 @@ const s = {
     fontFamily: 'inherit',
     boxShadow: '0 1px 4px rgba(74,44,10,0.12)',
   },
-  emptyCart:        { color: '#999', textAlign: 'center', padding: '2rem 0' },
+  emptyCart:        { color: TEXT_MUTED, textAlign: 'center', padding: '2rem 0' },
   cartItem:         { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0.75rem 0', borderBottom: '1px solid #f0e0cc' },
   cartItemInfo:     { flex: 1 },
   cartItemName:     { fontWeight: 'bold', color: BROWN, fontSize: '0.95rem' },
-  cartItemMeta:     { fontSize: '0.78rem', color: '#999', marginTop: '0.25rem' },
+  cartItemMeta:     { fontSize: '0.78rem', color: TEXT_MUTED, marginTop: '0.25rem' },
   cartItemRight:    { display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: '1rem' },
   cartPriceStack:   { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.2 },
-  cartItemOldPrice: { color: '#9f8e79', textDecoration: 'line-through', fontSize: '0.82rem' },
-  cartItemPrice:    { fontWeight: 'bold', color: ACCENT },
-  removeBtn:        { background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '0.9rem' },
+  cartItemOldPrice: { color: '#5c534a', textDecoration: 'line-through', fontSize: '0.82rem' },
+  cartItemPrice:    { fontWeight: 'bold', color: PRICE_TEXT },
+  removeBtn:        { background: 'none', border: 'none', color: '#5c3d2e', cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'underline' },
   quantityBtn:      { background: '#f5f5f5', border: '1px solid #ddd', borderRadius: '4px', color: BROWN, cursor: 'pointer', fontSize: '0.9rem', width: '2rem', height: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   cartTotalRow:     { display: 'flex', justifyContent: 'space-between', padding: '1rem 0', fontWeight: 'bold', fontSize: '1.1rem', color: BROWN },
   cartSavings:      { fontSize: '0.78rem', color: '#2d6a4f' },
-  cartTotalAmt:     { color: ACCENT, fontSize: '1.2rem' },
+  cartTotalAmt:     { color: PRICE_TEXT, fontSize: '1.2rem' },
   cartCouponLabel:  { fontSize: '0.88rem', fontWeight: 'bold', color: BROWN },
   cartCouponActions: { display: 'flex', gap: '0.35rem' },
   cartCouponActionBtn: { flex: 1, border: '1px solid #d5c2a8', borderRadius: '8px', background: '#fff', color: BROWN, padding: '0.35rem 0.45rem', fontSize: '0.76rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'bold' },
@@ -2327,33 +2387,57 @@ const s = {
   assistantQuickButton: { border: '1px solid #e8d5b7', background: '#fdf6ec', color: BROWN, borderRadius: '999px', padding: '0.45rem 0.7rem', cursor: 'pointer', fontFamily: 'inherit' },
   assistantChatWindow: { flex: 1, minHeight: 0, overflowY: 'auto', border: '1px solid #f0e0cc', borderRadius: '18px', padding: '0.85rem', background: '#fffdf9', display: 'flex', flexDirection: 'column', gap: '0.75rem' },
   assistantMessage: { maxWidth: '80%', padding: '0.8rem 0.95rem', borderRadius: '16px', lineHeight: 1.45, whiteSpace: 'pre-wrap' },
-  assistantMessageBot: { background: '#f3e6d8', alignSelf: 'flex-start' },
+  assistantMessageBot: { background: '#f3e6d8', color: BROWN, alignSelf: 'flex-start' },
   assistantMessageUser: { background: BROWN, color: '#fff', alignSelf: 'flex-end' },
   assistantError:   { color: '#b00020', fontWeight: 'bold', margin: 0 },
   assistantForm:    { display: 'flex', gap: '0.65rem' },
   assistantInput:   { flex: 1, borderRadius: '999px', border: '1px solid #d8c1a5', padding: '0.85rem 0.95rem', fontSize: '1rem', fontFamily: 'inherit' },
-  assistantSendButton: { border: 'none', borderRadius: '999px', background: ACCENT, color: '#fff', padding: '0.85rem 1.2rem', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'inherit' },
+  assistantSendButton: { border: 'none', borderRadius: '999px', background: ACCENT_FILL, color: '#fff', padding: '0.85rem 1.2rem', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'inherit' },
   wheelModal:       { background: '#fff', borderRadius: '20px', padding: '1.3rem', width: '92%', maxWidth: '420px', maxHeight: '88vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.8rem' },
   wheelHeader:      { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
   wheelTitle:       { margin: 0, color: BROWN, fontSize: '1.3rem' },
   wheelCloseBtn:    { border: 'none', background: '#f3e6d8', color: BROWN, borderRadius: '50%', width: '2rem', height: '2rem', cursor: 'pointer', fontWeight: 'bold' },
-  wheelLimitNote:   { margin: 0, color: '#7a5c3b', fontSize: '0.86rem', fontWeight: 'bold' },
-  wheelHint:        { margin: 0, color: '#7a5c3b', fontSize: '0.9rem' },
+  wheelLimitNote:   { margin: 0, color: '#3d2914', fontSize: '0.86rem', fontWeight: 'bold' },
+  wheelHint:        { margin: 0, color: '#3d2914', fontSize: '0.9rem' },
   wheelCouponCard:  { border: '1px solid #e8d5b7', background: '#fff8f0', borderRadius: '10px', padding: '0.55rem 0.7rem' },
-  wheelCouponTitle: { margin: 0, color: '#7a5c3b', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 'bold' },
+  wheelCouponTitle: { margin: 0, color: '#321f0f', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 'bold' },
   wheelCouponText:  { margin: '0.2rem 0 0', color: BROWN, fontSize: '0.92rem', fontWeight: 'bold' },
   wheelStage:       { position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0.6rem 0 0.3rem' },
   wheelPointer:     { position: 'absolute', top: '-0.35rem', fontSize: '1.2rem', color: BROWN, zIndex: 2 },
   wheelDisc:        { width: '250px', height: '250px', borderRadius: '50%', border: `6px solid ${BROWN}`, position: 'relative', boxShadow: '0 8px 20px rgba(0,0,0,0.18)' },
-  wheelSegmentLabel: { position: 'absolute', top: '50%', left: '50%', transformOrigin: '0 0', color: BROWN, fontSize: '0.62rem', fontWeight: 'bold', width: '56px', textAlign: 'center', lineHeight: 1.1, whiteSpace: 'normal', wordBreak: 'break-word' },
+  wheelSegmentLabel: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transformOrigin: '0 0',
+    color: '#220f05',
+    fontSize: '0.62rem',
+    fontWeight: 'bold',
+    width: '56px',
+    textAlign: 'center',
+    lineHeight: 1.1,
+    whiteSpace: 'normal',
+    wordBreak: 'break-word',
+    textShadow: '0 0 2px #ffffff, 0 0 6px #ffffff',
+  },
   wheelHub:         { position: 'absolute', width: '24px', height: '24px', borderRadius: '50%', background: BROWN, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' },
-  wheelSpinBtn:     { border: 'none', background: ACCENT, color: '#fff', borderRadius: '50px', padding: '0.75rem 1.2rem', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'inherit', fontSize: '1rem' },
+  wheelSpinBtn:     { border: 'none', background: ACCENT_FILL, color: '#fff', borderRadius: '50px', padding: '0.75rem 1.2rem', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'inherit', fontSize: '1rem' },
   wheelClaimBtn:    { border: 'none', background: BROWN, color: '#fff', borderRadius: '50px', padding: '0.72rem 1.2rem', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'inherit', fontSize: '0.95rem' },
-  wheelSpinBtnDisabled: { opacity: 0.6, cursor: 'not-allowed' },
+  wheelSpinBtnDisabled: {
+    border: 'none',
+    background: '#c9beb3',
+    color: '#383838',
+    borderRadius: '50px',
+    padding: '0.75rem 1.2rem',
+    cursor: 'not-allowed',
+    fontWeight: 'bold',
+    fontFamily: 'inherit',
+    fontSize: '1rem',
+  },
   pointsBadge:   { background: '#fff', color: BROWN, borderRadius: '50px', padding: '0.45rem 1rem', fontSize: '0.9rem', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', boxShadow: '0 2px 6px rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', transition: 'transform 0.2s ease, box-shadow 0.2s ease' },
   funModeBtn:    { width: '2.2rem', height: '2.2rem', borderRadius: '50%', border: 'none', fontSize: '1.2rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, transition: 'opacity 0.2s ease, box-shadow 0.2s ease' },
   funModeBtnOn:  { background: '#fff', boxShadow: '0 2px 8px rgba(200,119,58,0.45)', opacity: 1 },
-  funModeBtnOff: { background: 'rgba(255,255,255,0.25)', boxShadow: 'none', opacity: 0.45 },
+  funModeBtnOff: { background: '#fff', boxShadow: 'none', opacity: 1, border: '2px solid rgba(255,255,255,0.5)' },
   drinkEmojiLarge: { fontSize: '3.8rem' },
   wizardBox:         { background: '#fff', borderRadius: '24px', padding: '2rem 1.5rem', width: '92%', maxWidth: '420px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' },
   wizardCloseBtn:    { position: 'absolute', top: '0.85rem', left: '0.85rem', background: '#f3e6d8', border: 'none', borderRadius: '50%', width: '2rem', height: '2rem', fontSize: '1rem', fontWeight: 'bold', color: BROWN, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 },
@@ -2364,7 +2448,7 @@ const s = {
   wizardSummaryChip: { background: '#fff4eb', border: `1.5px solid ${ACCENT}`, borderRadius: '50px', padding: '0.25rem 0.75rem', fontSize: '0.85rem', fontWeight: 'bold', color: BROWN, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' },
   wizardDots:        { display: 'flex', justifyContent: 'center', gap: '0.6rem', margin: '0.75rem 0' },
   wizardDot:         { width: '0.7rem', height: '0.7rem', borderRadius: '50%', background: '#e8d5b7', display: 'inline-block' },
-  wizardDotActive:   { background: ACCENT, transform: 'scale(1.3)' },
+  wizardDotActive:   { background: ACCENT_FILL, transform: 'scale(1.3)' },
   wizardStep:        { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' },
   wizardQuestion:    { fontSize: '1.5rem', fontWeight: 'bold', color: BROWN, textAlign: 'center', margin: 0 },
   wizardOptions:     { display: 'flex', gap: '0.8rem', justifyContent: 'center', flexWrap: 'wrap', width: '100%' },
@@ -2377,25 +2461,25 @@ const s = {
   wizardToppingBtnActive: { border: `2px solid ${ACCENT}`, background: '#fff4eb', color: BROWN },
   wizardFooter:      { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.75rem', marginTop: '0.5rem' },
   wizardBackBtn:     { background: '#f3e6d8', border: 'none', borderRadius: '50px', padding: '0.6rem 1.2rem', fontSize: '0.95rem', color: BROWN, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'bold' },
-  wizardTotal:       { fontSize: '1.4rem', fontWeight: 'bold', color: ACCENT },
+  wizardTotal:       { fontSize: '1.4rem', fontWeight: 'bold', color: PRICE_TEXT },
   wizardAddBtn:      { background: BROWN, color: '#fff', border: 'none', borderRadius: '50px', padding: '0.75rem 1.4rem', fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'bold' },
   achievementToast:  { position: 'fixed', bottom: '5rem', right: '1.5rem', background: BROWN, color: '#fff', padding: '0.9rem 1.2rem', borderRadius: '18px', display: 'flex', alignItems: 'center', gap: '0.8rem', zIndex: 500, boxShadow: '0 6px 24px rgba(0,0,0,0.25)', minWidth: '200px' },
   achievementIcon:   { fontSize: '2rem', lineHeight: 1, flexShrink: 0 },
-  achievementLabel:  { fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.8, fontWeight: 'bold' },
-  achievementName:   { fontSize: '1.05rem', fontWeight: 'bold' },
+  achievementLabel:  { fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#f8fafc', fontWeight: 'bold' },
+  achievementName:   { fontSize: '1.05rem', fontWeight: 'bold', color: '#ffffff' },
   achievementsPanel:       { background: '#fff', borderRadius: '20px', padding: '2rem', width: '90%', maxWidth: '420px', maxHeight: '85vh', overflowY: 'auto' },
   achievementsPanelHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' },
   achievementsPanelTitle:  { fontSize: '1.4rem', fontWeight: 'bold', color: BROWN, margin: 0 },
-  achievementsPanelSub:    { fontSize: '0.85rem', color: '#999', margin: '0 0 1.25rem' },
+  achievementsPanelSub:    { fontSize: '0.85rem', color: TEXT_MUTED, margin: '0 0 1.25rem' },
   achievementsCloseBtn:    { border: 'none', background: '#f3e6d8', color: BROWN, borderRadius: '50%', width: '2rem', height: '2rem', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem' },
   achievementsList:        { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
   achievementsItem:        { display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.9rem 1rem', borderRadius: '14px', border: '2px solid transparent' },
   achievementsItemEarned:  { background: '#fff8f0', border: `2px solid ${ACCENT}` },
-  achievementsItemLocked:  { background: '#f5f5f5', opacity: 0.6 },
+  achievementsItemLocked:  { background: '#ececec', border: '2px dashed #b0b0b0', opacity: 1 },
   achievementsItemIcon:    { fontSize: '2rem', lineHeight: 1, flexShrink: 0 },
   achievementsItemInfo:    { flex: 1 },
   achievementsItemName:    { fontWeight: 'bold', color: BROWN, fontSize: '1rem' },
-  achievementsItemHint:    { fontSize: '0.8rem', color: '#888', marginTop: '0.15rem' },
+  achievementsItemHint:    { fontSize: '0.8rem', color: TEXT_MUTED, marginTop: '0.15rem' },
   achievementsItemBadge:   { fontSize: '1.2rem', flexShrink: 0 },
   controlsBar: {
     background: '#f5ebe0',
@@ -2418,7 +2502,7 @@ const s = {
     fontWeight: 'bold',
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
-    color: '#7a5c3b',
+    color: '#291a0f',
     minWidth: '2.75rem',
   },
   viewToggleGroup:  { display: 'flex', gap: '0.35rem' },
@@ -2443,7 +2527,7 @@ const s = {
     gridColumn: '1 / -1',
     width: '100%',
     textAlign: 'center',
-    color: '#7a5c3b',
+    color: '#291a0f',
     padding: '2rem 1rem',
     margin: 0,
     fontSize: '1rem',

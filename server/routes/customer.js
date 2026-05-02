@@ -74,10 +74,12 @@ router.post('/order', async (req, res) => {
 
     // Insert each order item
     for (const item of items) {
+      const rawSize = String(item.drink_size ?? item.size ?? 'M');
+      const drink_size = ['S', 'M', 'L'].includes(rawSize) ? rawSize : 'M';
       const itemResult = await client.query(
         `INSERT INTO order_item 
-           (order_id, drink_id, qty, sweetness_level, ice_level, drink_unit_price, total_price)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+           (order_id, drink_id, qty, sweetness_level, ice_level, drink_unit_price, total_price, drink_size)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING order_item_id`,
         [
           order_id,
@@ -87,6 +89,7 @@ router.post('/order', async (req, res) => {
           item.ice_level,         // 'NO_ICE', 'LESS_ICE', or 'NORMAL_ICE'
           item.drink_unit_price,
           item.total_price,
+          drink_size,
         ]
       );
       const order_item_id = itemResult.rows[0].order_item_id;

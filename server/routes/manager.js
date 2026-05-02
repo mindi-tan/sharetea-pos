@@ -115,6 +115,7 @@ router.get('/orders', async (req, res) => {
               'qty', oi.qty,
               'sweetness_level', oi.sweetness_level,
               'ice_level', oi.ice_level,
+              'drink_size', oi.drink_size,
               'total_price', oi.total_price
             )
             ORDER BY oi.order_item_id

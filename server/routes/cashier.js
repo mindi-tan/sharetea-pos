@@ -124,11 +124,13 @@ router.post('/order', async (req, res) => {
       const qty = Number(item.qty || 1);
       const drinkUnitPrice = Number(item.drink_unit_price || 0);
       const totalPrice = Number(item.total_price || 0);
+      const rawSize = String(item.drink_size ?? item.size ?? 'M');
+      const drinkSize = ['S', 'M', 'L'].includes(rawSize) ? rawSize : 'M';
       const toppingIds = Array.isArray(item.toppings) ? item.toppings : [];
       const itemResult = await client.query(
         `INSERT INTO order_item
-          (order_id, drink_id, qty, sweetness_level, ice_level, drink_unit_price, total_price)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+          (order_id, drink_id, qty, sweetness_level, ice_level, drink_unit_price, total_price, drink_size)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING order_item_id`,
         [
           order_id,
@@ -138,6 +140,7 @@ router.post('/order', async (req, res) => {
           item.ice_level,
           drinkUnitPrice,
           totalPrice,
+          drinkSize,
         ]
       );
       const order_item_id = itemResult.rows[0].order_item_id;
