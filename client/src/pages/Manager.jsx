@@ -104,6 +104,7 @@ export default function Manager() {
   });
   const [inventoryAdding, setInventoryAdding] = useState(false);
   const [inventoryUpdatingId, setInventoryUpdatingId] = useState(null);
+  const [inventoryDeletingId, setInventoryDeletingId] = useState(null);
 
   // Supply/restock history state.
   // This reads from the supply_order table.
@@ -229,33 +230,32 @@ export default function Manager() {
     setError('');
 
     try {
-      const [sumRes, ordRes, empRes, drinksRes, categoriesRes, inventoryRes, supplyOrdersRes] = await Promise.all([
+      const [sumRes, ordRes] = await Promise.all([
         fetch(toApiUrl('/api/manager/summary')),
         fetch(toApiUrl('/api/manager/orders')),
-        fetch(toApiUrl('/api/manager/employees')),
-        fetch(toApiUrl('/api/manager/drinks')),
-        fetch(toApiUrl('/api/customer/categories')),
-        fetch(toApiUrl('/api/manager/inventory')),
-        fetch(toApiUrl('/api/manager/supply-orders')),
       ]);
 
       if (!sumRes.ok) throw new Error('Could not load summary');
       if (!ordRes.ok) throw new Error('Could not load orders');
-      if (!empRes.ok) throw new Error('Could not load employees');
-      if (!drinksRes.ok) throw new Error('Could not load drinks');
-      if (!categoriesRes.ok) throw new Error('Could not load categories');
-      if (!inventoryRes.ok) throw new Error('Could not load inventory');
-      if (!supplyOrdersRes.ok) throw new Error('Could not load supply orders');
 
-      const [sumData, ordData, empData, drinksData, categoriesData, inventoryData, supplyOrdersData] = await Promise.all([
+      const [empRes, drinksRes, categoriesRes, inventoryRes, supplyOrdersRes] = await Promise.all([
+        fetch(toApiUrl('/api/manager/employees')).catch(() => null),
+        fetch(toApiUrl('/api/manager/drinks')).catch(() => null),
+        fetch(toApiUrl('/api/customer/categories')).catch(() => null),
+        fetch(toApiUrl('/api/manager/inventory')).catch(() => null),
+        fetch(toApiUrl('/api/manager/supply-orders')).catch(() => null),
+      ]);
+
+      const [sumData, ordData] = await Promise.all([
         sumRes.json(),
         ordRes.json(),
-        empRes.json(),
-        drinksRes.json(),
-        categoriesRes.json(),
-        inventoryRes.json(),
-        supplyOrdersRes.json(),
       ]);
+
+      const empData = empRes && empRes.ok ? await empRes.json() : [];
+      const drinksData = drinksRes && drinksRes.ok ? await drinksRes.json() : [];
+      const categoriesData = categoriesRes && categoriesRes.ok ? await categoriesRes.json() : [];
+      const inventoryData = inventoryRes && inventoryRes.ok ? await inventoryRes.json() : [];
+      const supplyOrdersData = supplyOrdersRes && supplyOrdersRes.ok ? await supplyOrdersRes.json() : [];
 
       setSummary(sumData);
       setOrders(Array.isArray(ordData) ? ordData : []);
@@ -656,6 +656,32 @@ export default function Manager() {
       setError(e.message || 'Failed to update inventory quantity');
     } finally {
       setInventoryUpdatingId(null);
+    }
+  }
+
+  async function handleDeleteInventoryItem(invItemId, itemName) {
+    if (!window.confirm(`Are you sure you want to delete "${itemName}" from inventory?`)) {
+      return;
+    }
+
+    setError('');
+    setInventoryDeletingId(invItemId);
+
+    try {
+      const res = await fetch(toApiUrl(`/api/manager/inventory/${invItemId}`), {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Could not delete inventory item');
+      }
+
+      await loadData();
+    } catch (e) {
+      setError(e.message || 'Failed to delete inventory item');
+    } finally {
+      setInventoryDeletingId(null);
     }
   }
 
@@ -1681,7 +1707,7 @@ export default function Manager() {
                   <input
                     style={shell.input}
                     type="number"
-                    step="0.01"
+                    step="1"
                     min="0"
                     placeholder="Quantity"
                     value={newInventoryItem.current_qty}
@@ -1816,7 +1842,7 @@ export default function Manager() {
                               <input
                                 style={shell.input}
                                 type="number"
-                                step="0.01"
+                                step="1"
                                 min="0"
                                 value={item.current_qty}
                                 onChange={(e) => {
@@ -1832,14 +1858,24 @@ export default function Manager() {
                               />
                             </td>
                             <td style={shell.td}>
-                              <button
-                                type="button"
-                                style={shell.secondaryButton}
-                                disabled={inventoryUpdatingId === item.inv_item_id}
-                                onClick={() => handleUpdateInventoryQty(item.inv_item_id, item.current_qty)}
-                              >
-                                {inventoryUpdatingId === item.inv_item_id ? 'Saving…' : 'Save Qty'}
-                              </button>
+                              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button
+                                  type="button"
+                                  style={shell.secondaryButton}
+                                  disabled={inventoryUpdatingId === item.inv_item_id}
+                                  onClick={() => handleUpdateInventoryQty(item.inv_item_id, item.current_qty)}
+                                >
+                                  {inventoryUpdatingId === item.inv_item_id ? 'Saving…' : 'Save Qty'}
+                                </button>
+                                <button
+                                  type="button"
+                                  style={{ ...shell.secondaryButton, background: '#ffebee', color: '#b3261e' }}
+                                  disabled={inventoryDeletingId === item.inv_item_id}
+                                  onClick={() => handleDeleteInventoryItem(item.inv_item_id, item.inv_item_name)}
+                                >
+                                  {inventoryDeletingId === item.inv_item_id ? 'Deleting…' : 'Remove'}
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))

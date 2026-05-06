@@ -2,6 +2,16 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 
+async function supportsDrinkSizeColumn(client) {
+  const result = await client.query(
+    `SELECT 1
+     FROM information_schema.columns
+     WHERE table_name = 'order_item'
+       AND column_name = 'drink_size'`
+  );
+  return result.rowCount > 0;
+}
+
 // POST cashier login — checks PIN against user_account.password
 // Returns user info (without password) on success
 router.post('/login', async (req, res) => {
@@ -120,6 +130,7 @@ router.post('/order', async (req, res) => {
       [orderTotal.toFixed(2), user_id]
     );
     const order_id = orderResult.rows[0].order_id;
+    const insertDrinkSize = await supportsDrinkSizeColumn(client);
     for (const item of items) {
       const qty = Number(item.qty || 1);
       const drinkUnitPrice = Number(item.drink_unit_price || 0);
@@ -127,22 +138,36 @@ router.post('/order', async (req, res) => {
       const rawSize = String(item.drink_size ?? item.size ?? 'M');
       const drinkSize = ['S', 'M', 'L'].includes(rawSize) ? rawSize : 'M';
       const toppingIds = Array.isArray(item.toppings) ? item.toppings : [];
-      const itemResult = await client.query(
-        `INSERT INTO order_item
+      const itemQuery = insertDrinkSize
+        ? `INSERT INTO order_item
           (order_id, drink_id, qty, sweetness_level, ice_level, drink_unit_price, total_price, drink_size)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING order_item_id`,
-        [
-          order_id,
-          item.drink_id,
-          qty,
-          item.sweetness_level,
-          item.ice_level,
-          drinkUnitPrice,
-          totalPrice,
-          drinkSize,
-        ]
-      );
+         RETURNING order_item_id`
+        : `INSERT INTO order_item
+          (order_id, drink_id, qty, sweetness_level, ice_level, drink_unit_price, total_price)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING order_item_id`;
+      const itemParams = insertDrinkSize
+        ? [
+            order_id,
+            item.drink_id,
+            qty,
+            item.sweetness_level,
+            item.ice_level,
+            drinkUnitPrice,
+            totalPrice,
+            drinkSize,
+          ]
+        : [
+            order_id,
+            item.drink_id,
+            qty,
+            item.sweetness_level,
+            item.ice_level,
+            drinkUnitPrice,
+            totalPrice,
+          ];
+      const itemResult = await client.query(itemQuery, itemParams);
       const order_item_id = itemResult.rows[0].order_item_id;
       for (const topping_id of toppingIds) {
         await client.query(

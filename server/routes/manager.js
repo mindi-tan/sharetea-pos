@@ -115,7 +115,7 @@ router.get('/orders', async (req, res) => {
               'qty', oi.qty,
               'sweetness_level', oi.sweetness_level,
               'ice_level', oi.ice_level,
-              'drink_size', oi.drink_size,
+              'drink_size', COALESCE(to_jsonb(oi)->>'drink_size', to_jsonb(oi)->>'size', 'M'),
               'total_price', oi.total_price
             )
             ORDER BY oi.order_item_id
@@ -226,7 +226,7 @@ router.patch('/employees/:userId', async (req, res) => {
       return res.status(400).json({ error: 'Invalid user id' });
     }
 
-    if (!username || !password || !role) {
+    if (!username || !role) {
       return res.status(400).json({ error: 'Missing employee fields' });
     }
 
@@ -234,17 +234,18 @@ router.patch('/employees/:userId', async (req, res) => {
       return res.status(400).json({ error: 'Role must be MANAGER or CASHIER' });
     }
 
-    const { rows } = await db.query(
-      `
-      UPDATE user_account
-      SET username = $1,
-          password = $2,
-          role = $3
-      WHERE user_id = $4
-      RETURNING user_id, username, password, role
-      `,
-      [username, password, role, userId]
-    );
+    let query = `UPDATE user_account SET username = $1, role = $2`;
+    let params = [username, role, userId];
+
+    // Only update password if provided (not blank)
+    if (password && password.trim()) {
+      query = `UPDATE user_account SET username = $1, password = $2, role = $3`;
+      params = [username, password, role, userId];
+    }
+
+    query += ` WHERE user_id = $${params.length} RETURNING user_id, username, password, role`;
+
+    const { rows } = await db.query(query, params);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Employee not found' });
@@ -479,6 +480,50 @@ router.patch('/inventory/:invItemId', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to update inventory quantity' });
+  }
+});
+
+// Delete an inventory item and remove it from all recipes.
+router.delete('/inventory/:invItemId', async (req, res) => {
+  try {
+    const invItemId = parseInt(req.params.invItemId, 10);
+
+    if (!Number.isInteger(invItemId)) {
+      return res.status(400).json({ error: 'Invalid inventory item id' });
+    }
+
+    console.log(`Attempting to delete inventory item ${invItemId}`);
+
+    // Delete in order to avoid foreign key constraint violations:
+    // 1. Delete from drink_recipe (recipes that use this ingredient)
+    const recipeDeleteResult = await db.query(
+      `DELETE FROM drink_recipe WHERE inv_item_id = $1`,
+      [invItemId]
+    );
+    console.log(`Deleted ${recipeDeleteResult.rowCount} recipe items`);
+
+    // 2. Delete from supply_order (supply orders for this ingredient)
+    const supplyDeleteResult = await db.query(
+      `DELETE FROM supply_order WHERE inv_item_id = $1`,
+      [invItemId]
+    );
+    console.log(`Deleted ${supplyDeleteResult.rowCount} supply orders`);
+
+    // 3. Then delete the inventory item itself
+    const result = await db.query(
+      `DELETE FROM inventory_item WHERE inv_item_id = $1`,
+      [invItemId]
+    );
+    console.log(`Deleted ${result.rowCount} inventory items`);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Inventory item not found' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete inventory error:', err.message, err.code, err);
+    res.status(500).json({ error: `Failed to delete inventory item: ${err.message}` });
   }
 });
 

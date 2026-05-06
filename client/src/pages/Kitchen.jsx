@@ -184,9 +184,9 @@ export default function Kitchen() {
         <main style={s.grid}>
           {orders.map((order) => {
             const isCompleting = completing.has(order.order_id);
-            // `created_at` drives wait-time color; `order_ts` is shown as clock text.
-            const urg = urgencyColor(order.created_at);
-            const tint = urgencySoftTint(order.created_at);
+            const orderTime = order.created_at ?? order.order_ts;
+            const urg = urgencyColor(orderTime);
+            const tint = urgencySoftTint(orderTime);
             return (
               <article
                 key={order.order_id}
@@ -202,7 +202,7 @@ export default function Kitchen() {
                     <span style={s.orderId}>#{order.order_id}</span>
                   </div>
                   <time style={{ ...s.timePill, color: urg, borderColor: `${urg}55` }} dateTime={order.order_ts}>
-                    {formatTime(order.order_ts)}
+                    {formatTime(orderTime)}
                   </time>
                 </div>
 

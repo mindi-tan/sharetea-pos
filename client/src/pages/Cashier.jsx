@@ -14,13 +14,44 @@ const SUGAR_LEVELS = [
   { label: '0%', value: '0' },
   { label: '50%', value: '50' },
   { label: '100%', value: '100' },
+  { label: '125%', value: '125' },
 ];
 
-const ICE_LEVELS = [
+const ICE_LEVELS_DEFAULT = [
   { label: 'No Ice', value: 'NO_ICE' },
   { label: 'Less Ice', value: 'LESS_ICE' },
   { label: 'Regular', value: 'NORMAL_ICE' },
 ];
+
+const ICE_LEVELS_ALL = [
+  { label: 'No Ice', value: 'NO_ICE' },
+  { label: 'Less Ice', value: 'LESS_ICE' },
+  { label: 'Regular', value: 'NORMAL_ICE' },
+  { label: 'Hot', value: 'HOT' },
+];
+
+const SIZE_MULTIPLIERS = {
+  'S': 0.8,
+  'M': 1.0,
+  'L': 1.2,
+};
+
+const getIceLevelsForDrink = (drink) => {
+  if (drink && (drink.category_name === 'Coffee' || drink.category_name === 'Brewed Tea')) {
+    return [
+      { label: 'No Ice', value: 'NO_ICE' },
+      { label: 'Less Ice', value: 'LESS_ICE' },
+      { label: 'Regular', value: 'NORMAL_ICE' },
+      { label: 'Hot', value: 'HOT' },
+    ];
+  }
+  if (drink && drink.category_name === 'Ice Blended') {
+    return [
+      { label: 'Regular', value: 'NORMAL_ICE' },
+    ];
+  }
+  return ICE_LEVELS_DEFAULT;
+};
 
 const PIN_MAX_LENGTH = 4;
 
@@ -52,6 +83,7 @@ export default function Cashier() {
   const [customization, setCustomization] = useState({
     sugar: '100',
     ice: 'NORMAL_ICE',
+    size: 'M',
     toppings: [],
     qty: 1,
   });
@@ -144,6 +176,7 @@ export default function Cashier() {
     setCustomization({
       sugar: '100',
       ice: 'NORMAL_ICE',
+      size: 'M',
       toppings: [],
       qty: 1,
     });
@@ -152,7 +185,16 @@ export default function Cashier() {
   /** Opens the modal and clears prior sugar/ice/topping/qty choices for the new drink. */
   const handleDrinkSelect = (drink) => {
     setSelectedDrink(drink);
-    resetCustomization();
+    const defaultIce = (drink.category_name === 'Coffee' || drink.category_name === 'Brewed Tea') 
+      ? 'HOT' 
+      : 'NORMAL_ICE';
+    setCustomization({
+      sugar: '100',
+      ice: defaultIce,
+      size: 'M',
+      toppings: [],
+      qty: 1,
+    });
   };
 
   /** Dismiss modal without adding (clears `selectedDrink` and customization). */
@@ -171,8 +213,8 @@ export default function Cashier() {
     }));
   };
 
-  /** Base drink price plus sum of selected topping prices (for preview and ticket line). */
-  const getSingleDrinkPrice = (drink, selectedToppingIds) => {
+  /** Base drink price plus sum of selected topping prices, with size multiplier applied. */
+  const getSingleDrinkPrice = (drink, selectedToppingIds, size = 'M') => {
     if (!drink) {
       return 0;
     }
@@ -182,10 +224,11 @@ export default function Cashier() {
       return sum + (topping ? Number(topping.topping_price) : 0);
     }, 0);
 
-    return Number(drink.base_price) + toppingTotal;
+    const sizeMultiplier = SIZE_MULTIPLIERS[size] || 1.0;
+    return Number((Number(drink.base_price) + toppingTotal) * sizeMultiplier);
   };
 
-  const currentItemUnitPrice = getSingleDrinkPrice(selectedDrink, customization.toppings);
+  const currentItemUnitPrice = getSingleDrinkPrice(selectedDrink, customization.toppings, customization.size);
   const currentItemTotal = currentItemUnitPrice * customization.qty;
 
   /** Appends one ticket row using the same shape the order POST expects. */
@@ -194,7 +237,7 @@ export default function Cashier() {
       return;
     }
 
-    const unitPrice = getSingleDrinkPrice(selectedDrink, customization.toppings);
+    const unitPrice = getSingleDrinkPrice(selectedDrink, customization.toppings, customization.size);
     const qty = Number(customization.qty);
 
     const newItem = {
@@ -203,8 +246,9 @@ export default function Cashier() {
       qty,
       sweetness_level: customization.sugar,
       ice_level: customization.ice,
+      size: customization.size,
       toppings: customization.toppings,
-      drink_unit_price: Number(selectedDrink.base_price),
+      drink_unit_price: unitPrice,
       total_price: Number((unitPrice * qty).toFixed(2)),
     };
 
@@ -217,8 +261,8 @@ export default function Cashier() {
     setTicketItems((prev) => prev.filter((item) => item.id !== itemId));
   };
 
-  /** Unit price (base + toppings) for one drink on a ticket line — used when changing qty in the ticket. */
-  const getLineUnitPrice = (item) => getSingleDrinkPrice(item.drink, item.toppings);
+  /** Unit price (base + toppings + size) for one drink on a ticket line — used when changing qty in the ticket. */
+  const getLineUnitPrice = (item) => getSingleDrinkPrice(item.drink, item.toppings, item.size);
 
   const incrementTicketQty = (itemId) => {
     setTicketItems((prev) =>
@@ -273,7 +317,7 @@ export default function Cashier() {
   };
 
   const getIceLabel = (value) => {
-    return ICE_LEVELS.find((level) => level.value === value)?.label || value;
+    return ICE_LEVELS_ALL.find((level) => level.value === value)?.label || value;
   };
 
   /**
@@ -297,6 +341,7 @@ export default function Cashier() {
           qty: item.qty,
           sweetness_level: item.sweetness_level,
           ice_level: item.ice_level,
+          size: item.size,
           drink_unit_price: Number(item.drink_unit_price),
           toppings: item.toppings,
           total_price: Number(item.total_price.toFixed(2)),
@@ -518,7 +563,7 @@ export default function Cashier() {
               All
             </button>
 
-            {categories.map((category) => (
+            {categories.filter((c) => c.category_name !== 'Featured').map((category) => (
               <button
                 key={category.category_id}
                 type="button"
@@ -576,7 +621,7 @@ export default function Cashier() {
                     <div style={styles.ticketItemLeftCol}>
                       <div style={styles.ticketItemName}>{item.drink.drink_name}</div>
                       <div style={styles.ticketItemMeta}>
-                        {getSugarLabel(item.sweetness_level)} sweet, {getIceLabel(item.ice_level)}
+                        Size {item.size}, {getSugarLabel(item.sweetness_level)} sweet, {getIceLabel(item.ice_level)}
                       </div>
                       {item.toppings.length > 0 && (
                         <div style={styles.ticketItemMeta}>
@@ -742,7 +787,7 @@ export default function Cashier() {
             <div style={styles.controlGroup}>
               <label style={styles.label}>Ice</label>
               <div style={styles.optionRow}>
-                {ICE_LEVELS.map((level) => (
+                {getIceLevelsForDrink(selectedDrink).map((level) => (
                   <button
                     key={level.value}
                     type="button"
@@ -758,6 +803,30 @@ export default function Cashier() {
                     }
                   >
                     {level.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={styles.controlGroup}>
+              <label style={styles.label}>Size</label>
+              <div style={styles.optionRow}>
+                {['S', 'M', 'L'].map((sizeOption) => (
+                  <button
+                    key={sizeOption}
+                    type="button"
+                    style={{
+                      ...styles.optionButton,
+                      ...(customization.size === sizeOption ? styles.optionButtonActive : {}),
+                    }}
+                    onClick={() =>
+                      setCustomization((prev) => ({
+                        ...prev,
+                        size: sizeOption,
+                      }))
+                    }
+                  >
+                    {sizeOption}
                   </button>
                 ))}
               </div>

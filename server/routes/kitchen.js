@@ -6,7 +6,7 @@ const db = require('../db');
 router.get('/orders', async (req, res) => {
   try {
     const ordersResult = await db.query(`
-      SELECT order_id, order_ts
+      SELECT order_id, order_ts, order_ts AS created_at
       FROM cust_order
       WHERE order_status = 'pending'
       ORDER BY order_ts ASC
@@ -28,17 +28,17 @@ router.get('/orders', async (req, res) => {
         oi.qty,
         oi.sweetness_level,
         oi.ice_level,
-        oi.drink_size,
+        COALESCE(to_jsonb(oi)->>'drink_size', to_jsonb(oi)->>'size', 'M') AS drink_size,
         COALESCE(
           json_agg(t.topping_name) FILTER (WHERE t.topping_name IS NOT NULL),
-          '[]'
+          '[]'::json
         ) AS toppings
       FROM order_item oi
       JOIN drink d ON oi.drink_id = d.drink_id
       LEFT JOIN order_item_topping oit ON oi.order_item_id = oit.order_item_id
       LEFT JOIN topping t ON oit.topping_id = t.topping_id
-      WHERE oi.order_id = ANY($1)
-      GROUP BY oi.order_id, oi.order_item_id, d.drink_name, oi.qty, oi.sweetness_level, oi.ice_level, oi.drink_size
+      WHERE oi.order_id = ANY($1::int[])
+      GROUP BY oi.order_id, oi.order_item_id, d.drink_name, oi.qty, oi.sweetness_level, oi.ice_level, COALESCE(to_jsonb(oi)->>'drink_size', to_jsonb(oi)->>'size', 'M')
       ORDER BY oi.order_item_id ASC
     `, [orderIds]);
 

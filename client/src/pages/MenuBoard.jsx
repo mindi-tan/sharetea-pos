@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 /**
  * MenuBoard.jsx — full-viewport wall / kiosk menu: static categories and sample prices,
  * toppings blurb. Styled with inline objects (`s`); no API calls.
@@ -9,80 +10,18 @@ const CREAM = '#fdf6ec';
 const ACCENT = '#c8773a';
 const LIGHT = '#fff8f0';
 
-/**
- * Category grid source: names align with the customer-facing menu; `items` are display
- * strings (name — price). Edit here to change what the board shows; live POS may differ.
- */
-const MENU_SECTIONS = [
-  {
-    name: 'Milk Tea',
-    emoji: '🧋',
-    items: [
-      'Classic Milk Tea — $4.75',
-      'Brown Sugar Milk Tea — $5.50',
-      'Taro Milk Tea — $5.25',
-      'Thai Milk Tea — $5.00',
-      'Honey Milk Tea — $4.95',
-    ],
-  },
-  {
-    name: 'Fruit Tea',
-    emoji: '🍓',
-    items: [
-      'Strawberry Fruit Tea — $5.25',
-      'Passion Fruit Green Tea — $5.00',
-      'Mango Jasmine Tea — $5.25',
-      'Peach Oolong — $4.95',
-      'Lychee Black Tea — $5.10',
-    ],
-  },
-  {
-    name: 'Fresh Milk',
-    emoji: '🥛',
-    items: [
-      'Brown Sugar Fresh Milk — $5.75',
-      'Fresh Milk with Pudding — $5.50',
-      'Caramel Fresh Milk — $5.25',
-    ],
-  },
-  {
-    name: 'Brewed Tea',
-    emoji: '🍵',
-    items: [
-      'Jasmine Green Tea — $3.75',
-      'Assam Black Tea — $3.75',
-      'Oolong Tea — $3.95',
-      'Wintermelon Tea — $4.25',
-    ],
-  },
-  {
-    name: 'Ice Blended',
-    emoji: '🧊',
-    items: [
-      'Mango Smoothie — $6.00',
-      'Taro Slush — $5.75',
-      'Matcha Frappe — $6.25',
-      'Coffee Jelly Frappe — $5.95',
-    ],
-  },
-  {
-    name: 'Mojito',
-    emoji: '🌿',
-    items: [
-      'Lime Mojito (no alcohol) — $5.50',
-      'Strawberry Mojito — $5.65',
-      'Passion Mojito — $5.65',
-    ],
-  },
-  {
-    name: 'Seasonal',
-    emoji: '🌸',
-    items: [
-      'Sakura Rose Milk Tea — $5.95',
-      'Ube Coconut Latte — $6.10',
-    ],
-  },
-];
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const toApiUrl = (path) => `${API_BASE}${path}`;
+
+const CATEGORY_EMOJIS = {
+  'Milk Tea': '🧋',
+  'Fruit Tea': '🍓',
+  Coffee: '☕',
+  'Brewed Tea': '🍵',
+  'Ice Blended': '🧊',
+  Mojito: '🌿',
+  Seasonal: '🌸',
+};
 
 // Single line shown next to “Add-ons” in the footer.
 const TOPPINGS_LINE =
@@ -224,10 +163,10 @@ const s = {
   priceHint: { color: ACCENT, fontWeight: 'bold' },
 };
 
-function formatSizes(priceStr) {
-  const base = Number(priceStr.replace('$', ''));
+function formatSizes(basePrice) {
+  const base = Number(basePrice);
 
-  if (Number.isNaN(base)) return priceStr;
+  if (Number.isNaN(base)) return '';
 
   const small = (base * 0.8).toFixed(2);
   const medium = base.toFixed(2);
@@ -241,71 +180,153 @@ function formatSizes(priceStr) {
  * @param {{ section: { name: string; emoji: string; items: string[] } }} props
  */
 function Column({ section }) {
+  const itemCount = section.items.length;
+  const compact = itemCount > 4;
+  const veryCompact = itemCount > 6;
+
   return (
     <section style={s.column} aria-labelledby={`menu-${section.name}`}>
       <h2 id={`menu-${section.name}`} style={s.colTitle}>
         {section.emoji} {section.name}
       </h2>
-      <ul style={s.list}>
-        {section.items.map((text) => {
-          const [name, price] = text.split(' — ');
+        <ul
+          style={{
+            ...s.list,
+            gap: veryCompact ? 0 : compact ? '0.04rem' : s.list.gap,
+            justifyContent: itemCount > 7 ? 'space-evenly' : 'flex-start',
+          }}
+        >
+        {section.items.map((item) => (
+          <li
+            key={item.id}
+            style={{
+              ...s.line,
+              fontSize: veryCompact
+                ? 'clamp(0.75rem, 1.2vmin + 0.5vw, 1.05rem)'
+                : compact
+                ? 'clamp(0.85rem, 1.45vmin + 0.6vw, 1.2rem)'
+                : s.line.fontSize,
+              lineHeight: veryCompact ? 1.15 : compact ? 1.2 : 1.28,
+              padding: veryCompact ? '0.02rem 0' : compact ? '0.05rem 0' : s.line.padding,
+            }}
+          >
+            <div style={{ fontWeight: 600 }}>{item.name}</div>
 
-          return (
-            <li key={text} style={s.line}>
-              <div style={{ fontWeight: 600 }}>{name}</div>
-
-              <div
-                style={{
-                  fontSize: '0.7em',
-                  color: '#6b4b2c',
-                  marginTop: '0.1rem',
-                }}
-              >
-                {formatSizes(price)}
-              </div>
-            </li>
-          );
-        })}
+            <div
+              style={{
+                fontSize: veryCompact ? '0.6em' : compact ? '0.65em' : '0.7em',
+                color: '#6b4b2c',
+                marginTop: veryCompact ? 0 : '0.05rem',
+              }}
+            >
+              {formatSizes(item.price)}
+            </div>
+          </li>
+        ))}
       </ul>
     </section>
   );
 }
 
 export default function MenuBoard() {
-  // Split sections to match the 4+3 column layout (see `row4` / `row3`).
-  const rowA = MENU_SECTIONS.slice(0, 4);
-  const rowB = MENU_SECTIONS.slice(4);
+  const [menuSections, setMenuSections] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    async function loadMenuBoard() {
+      try {
+        const res = await fetch(toApiUrl('/api/menu/menu-board'));
+
+        if (!res.ok) {
+          throw new Error('Failed to load menu board');
+        }
+
+        const rows = await res.json();
+
+        const grouped = [];
+
+        rows.forEach((row) => {
+          let section = grouped.find((s) => s.category_id === row.category_id);
+
+          if (!section) {
+            section = {
+              category_id: row.category_id,
+              name: row.category_name,
+              emoji: CATEGORY_EMOJIS[row.category_name] || '🥤',
+              items: [],
+            };
+
+            grouped.push(section);
+          }
+
+          if (row.drink_id) {
+            section.items.push({
+              id: row.drink_id,
+              name: row.drink_name,
+              price: Number(row.base_price),
+            });
+          }
+        });
+
+        const filtered = grouped.filter(
+          (section) => section.name !== 'Featured'
+        );
+
+        setMenuSections(filtered);
+
+      } catch (err) {
+        setError(err.message || 'Could not load menu board');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadMenuBoard();
+  }, []);
+
+  const rowA = menuSections.slice(0, 4);
+  const rowB = menuSections.slice(4);
 
   return (
     <div style={s.root}>
-      {/* Centered brand */}
       <header style={s.header}>
         <h1 style={s.logo}>Reveille Boba</h1>
       </header>
 
-      {/* Category grids */}
       <div style={s.board}>
-        <div style={{ ...s.rowUpper, ...s.row4 }}>
-          {rowA.map((section) => (
-            <Column key={section.name} section={section} />
-          ))}
-        </div>
-        <div style={{ ...s.rowLower, ...s.row3 }}>
-          {rowB.map((section) => (
-            <Column key={section.name} section={section} />
-          ))}
-        </div>
+        {loading ? (
+          <p style={{ textAlign: 'center', fontSize: '1.5rem' }}>Loading menu…</p>
+        ) : error ? (
+          <p style={{ textAlign: 'center', color: ACCENT, fontSize: '1.5rem' }}>
+            {error}
+          </p>
+        ) : (
+          <>
+            <div style={{ ...s.rowUpper, ...s.row4 }}>
+              {rowA.map((section) => (
+                <Column key={section.category_id} section={section} />
+              ))}
+            </div>
+
+            <div style={{ ...s.rowLower, ...s.row3 }}>
+              {rowB.map((section) => (
+                <Column key={section.category_id} section={section} />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Add-ons line + sweetness / ice reminder */}
       <footer style={s.footer}>
         <div>
           <span style={s.toppingsLabel}>Add-ons</span>
           {TOPPINGS_LINE}
         </div>
         <p style={s.footnote}>
-          Sweetness <span style={s.priceHint}>0% / 50% / 100% / 125%</span> and ice{' '}
-          <span style={s.priceHint}>no / less / regular</span> when ordering.
+          Sweetness <span style={s.priceHint}>0% / 50% / 100% / 125%</span>, ice{' '}
+          <span style={s.priceHint}>no / less / regular</span>, and sizes{' '}
+          <span style={s.priceHint}>S / M / L</span> available.
         </p>
       </footer>
     </div>

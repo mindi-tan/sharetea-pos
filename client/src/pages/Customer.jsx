@@ -1,16 +1,7 @@
 // Imports
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 
-// Maps our short language codes to Google's BCP-47-ish codes. The backend
-// uses these when calling the Translate API.
-const GOOGLE_TRANSLATE_LANGUAGES = {
-  en: 'en',
-  es: 'es',
-  fr: 'fr',
-  hi: 'hi',
-  zh: 'zh-CN',
-};
 
 
 // API
@@ -63,9 +54,16 @@ const SIZE_LEVELS = [
 
 
 const SIZE_MULTIPLIERS = {
-  'S': 0.8,
-  'M': 1.0,
-  'L': 1.2,
+  'S': 0.8,  
+  'M': 1.0,  
+  'L': 1.2,  
+};
+
+const DEFAULT_CUSTOMIZATION = {
+  sugar: '100',
+  ice: 'NORMAL_ICE',
+  size: 'M',
+  toppings: [],
 };
 
 
@@ -78,8 +76,22 @@ const categoryEmojis = {
   Mojito: '🌿',
   Seasonal: '🌸',
   'Hot Drinks': '☕',
+  Coffee: '☕',
   Featured: '⭐',
   Caffeinated: '⚡',
+};
+
+const ALLERGY_RULES = {
+  dairy: {
+    label: 'No Dairy',
+    emoji: '🥛',
+    blockedIngredients: [
+      'Whole Milk',
+      'Creamer',
+      'Pudding Mix',
+      'Ice Cream Base',
+    ],
+  },
 };
 
 
@@ -92,12 +104,6 @@ const assistantStarterMessages = [
 ];
 
 
-const assistantQuickPrompts = [
-  'What are your most popular drinks under $6?',
-  'Suggest a fruity drink with low sugar',
-  'What toppings pair best with brown sugar drinks?',
-  'How do I customize sugar and ice levels?',
-];
 
 
 const WHEEL_DEALS = [
@@ -112,7 +118,7 @@ const INGREDIENT_STYLE_PRESETS = [
   {
     id: 'teaFruit',
     label: 'Tea & fruit styles',
-
+    
     categoryNames: ['Fruit Tea', 'Brewed Tea', 'Mojito'],
   },
   {
@@ -124,114 +130,151 @@ const INGREDIENT_STYLE_PRESETS = [
 
 // UI text
 const DEFAULT_UI_TEXT = {
-  title: 'Reveille Boba',
-  cart: 'Cart',
-  all: 'All',
-  browseByCategory: 'Browse by category',
-  yourOrder: 'Your Order',
-  emptyCart: 'Your cart is empty.',
-  placeOrder: 'Place Order',
-  placingOrder: 'Placing Order...',
-  loadingMenu: 'Loading menu...',
-  sweetness: 'Sweetness Level',
-  ice: 'Ice Level',
-  toppings: 'Toppings',
-  pricesFromDb: '(prices from DB)',
-  addToCart: 'Add to Cart',
-  helperTitle: 'Reveille Boba Helper',
-  helperDescription: 'Ask about menu items, toppings, pricing, or ordering steps.',
-  helperThinking: 'Thinking...',
-  helperPlaceholder: 'Ask something about the menu or ordering...',
-  orderPlaced: '✅ Order placed! Thank you!',
-  total: 'Total',
-  size: 'Size',
-  iceLevel: 'Ice Level',
-  noIce: 'No Ice',
-  lessIce: 'Less Ice',
-  regular: 'Regular',
-  hot: 'Hot',
-  temperature: 'Temperature',
-  noSugar: 'No Sugar',
-  littleSugar: 'A Little',
-  fullSweet: 'Full Sweet',
-  extraSweet: 'Extra Sweet',
-  howSweet: 'How sweet?',
-  howCold: 'How cold?',
-  howHot: 'How hot?',
-  anyExtras: 'Any extras?',
-  back: 'Back',
-};
+    title: 'Reveille Boba',
+    cart: 'Cart',
+    all: 'All',
+    browseByCategory: 'Browse by category',
+    yourOrder: 'Your Order',
+    emptyCart: 'Your cart is empty.',
+    placeOrder: 'Place Order',
+    proceedCheckout: 'Proceed to checkout',
+    checkoutTitle: 'Checkout',
+    orderReview: 'Order review',
+    paymentDetails: 'Payment details',
+    cardholderName: 'Name on card',
+    cardNumber: 'Card number',
+    cardExpiry: 'Expiry (MM/YY)',
+    cardCvv: 'CVV',
+    payAndPlaceOrder: 'Pay & place order',
+    backToOrder: 'Back to cart',
+    cold: 'Cold',
+    serving: 'Serving',
+    placingOrder: 'Placing Order...',
+    loadingMenu: 'Loading menu...',
+    sweetness: 'Sweetness Level',
+    ice: 'Ice Level',
+    toppings: 'Toppings',
+    pricesFromDb: '(prices from DB)',
+    addToCart: 'Add to Cart',
+    updateCart: 'Update cart',
+    editCartItem: 'Edit',
+    helperTitle: 'Reveille Boba Helper',
+    helperDescription: 'Ask about menu items, toppings, pricing, or ordering steps.',
+    helperThinking: 'Thinking...',
+    helperPlaceholder: 'Ask something about the menu or ordering...',
+    orderPlaced: '✅ Order placed! Thank you!',
+    total: 'Total',
+    size: 'Size',
+    iceLevel: 'Ice Level',
+    noIce: 'No Ice',
+    lessIce: 'Less Ice',
+    regular: 'Regular',
+    hot: 'Hot',
+    temperature: 'Temperature',
+    noSugar: 'No Sugar',
+    littleSugar: 'A Little',
+    fullSweet: 'Full Sweet',
+    extraSweet: 'Extra Sweet',
+    howSweet: 'How sweet?',
+    howCold: 'How cold?',
+    howHot: 'How hot?',
+    anyExtras: 'Any extras?',
+    back: 'Back',
+    features: 'Features',
+    spinTheWheel: 'Spin the wheel',
+    allergyGuide: 'Allergy guide',
+    chatbot: 'Chatbot',
+    enable: 'Enable',
+    disable: 'Disable',
+    funMode: 'Fun Mode',
+    greatPickForToday: 'A great pick for today',
+    cozyPickForRainyWeather: 'Cozy pick for rainy weather',
+    recommendedForHotWeather: 'Recommended for hot weather',
+    recommendedForCoolerWeather: 'Recommended for cooler weather',
+    chatbotQ1: 'What are your most popular drinks under $6?',
+    chatbotQ2: 'Suggest a fruity drink with low sugar',
+    chatbotQ3: 'What toppings pair best with brown sugar drinks?',
+    chatbotQ4: 'How do I customize sugar and ice levels?',
+    allergiesTitle: 'Allergies & Sensitivities',
+    commonIngredients: 'Common Ingredients',
+    allergiesImportant: 'Important: Recipes and suppliers can change. Shared blenders, shakers, and prep areas mean traces of dairy, nuts, gluten, soy, sesame, and other allergens can still be present even when a name sounds safe.',
+    allergyWarning: 'Tell a team member before you order if you have allergies or intolerances. Use the menu categories to explore, confirm with staff, and skip toppings you cannot have in the customization step.',
+  };
 
 
 // Page
 export default function Customer() {
-
+  
   // State
   const [speakingId, setSpeakingId] = useState(null);
+  const currentAudioRef = useRef(null);
 
-
+  
   const [categories, setCategories] = useState([]);
 
-
+  
   const [drinks, setDrinks] = useState([]);
 
-
+  
   const [toppings, setToppings] = useState([]);
 
-
+  
   const [loadingMenu, setLoadingMenu] = useState(true);
-  const [language, setLanguage] = useState(() => {
-    return localStorage.getItem('bobaLanguage') || 'en';
-  });
+  const [language, setLanguageState] = useState('en');
   const [uiText, setUiText] = useState(DEFAULT_UI_TEXT);
   const [translatedCategories, setTranslatedCategories] = useState({});
   const [translatedDrinks, setTranslatedDrinks] = useState({});
   const [translatedToppings, setTranslatedToppings] = useState({});
 
-
+  
   const [apiError, setApiError] = useState('');
 
-
+  
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-
+  
   const [cart, setCart] = useState([]);
 
-
+  
   const [modal, setModal] = useState(null);
 
+  const [editingCartItemId, setEditingCartItemId] = useState(null);
 
-  const [customization, setCustomization] = useState({
-    sugar: '100',
-    ice: 'NORMAL_ICE',
-    toppings: [],
-  });
+  
+  const [customization, setCustomization] = useState(DEFAULT_CUSTOMIZATION);
 
-
+  
   const [showCart, setShowCart] = useState(false);
 
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [paymentName, setPaymentName] = useState('');
+  const [paymentCard, setPaymentCard] = useState('');
+  const [paymentExpiry, setPaymentExpiry] = useState('');
+  const [paymentCvv, setPaymentCvv] = useState('');
+  const [checkoutError, setCheckoutError] = useState('');
 
+  
   const [orderPlaced, setOrderPlaced] = useState(false);
 
-
+  
   const [placingOrder, setPlacingOrder] = useState(false);
 
-
+  
   const [showAssistant, setShowAssistant] = useState(false);
 
-
+  
   const [assistantMessages, setAssistantMessages] = useState(
     assistantStarterMessages
   );
 
-
+  
   const [assistantInput, setAssistantInput] = useState('');
 
-
+  
   const [assistantLoading, setAssistantLoading] = useState(false);
   const [assistantError, setAssistantError]     = useState('');
 
-
+  
   const [weather, setWeather]                   = useState(null);
   const [showFeatureMenu, setShowFeatureMenu]   = useState(false);
   const [showWheel, setShowWheel]               = useState(false);
@@ -247,7 +290,7 @@ export default function Customer() {
   const featureMenuRef = useRef(null);
   const assistantInputRef = useRef(null);
 
-
+  
   const [funMode, setFunMode] = useState(() => {
     const stored = localStorage.getItem('bobaFunMode');
     return stored === null ? false : stored === 'true';
@@ -265,58 +308,60 @@ export default function Customer() {
     Number(localStorage.getItem('bobaTextSize') || 0)
   );
 
-
+  
   const [ingredientStylePreset, setIngredientStylePreset] = useState(null);
-
+  
   const [ingredientSearch, setIngredientSearch] = useState('');
 
+  const [allergyFilter, setAllergyFilter] = useState(null);
 
+  
   // Load menu
   useEffect(() => {
     const loadMenu = async () => {
       try {
-
+        
         setLoadingMenu(true);
         setApiError('');
 
-
+        
         const [categoriesRes, drinksRes, toppingsRes] = await Promise.all([
           fetch(toApiUrl('/api/customer/categories')),
           fetch(toApiUrl('/api/customer/drinks')),
           fetch(toApiUrl('/api/customer/toppings')),
         ]);
 
-
+        
         if (!categoriesRes.ok || !drinksRes.ok || !toppingsRes.ok) {
           throw new Error('Failed to load menu from server');
         }
 
-
+        
         const [categoriesData, drinksData, toppingsData] = await Promise.all([
           categoriesRes.json(),
           drinksRes.json(),
           toppingsRes.json(),
         ]);
 
-
+        
         setCategories(categoriesData);
         setDrinks(drinksData);
         setToppings(toppingsData);
       } catch (err) {
-
+        
         console.error(err);
 
-
+        
         setApiError('Could not load menu data. Please try again.');
       } finally {
-
+        
         setLoadingMenu(false);
       }
     };
     loadMenu();
   }, []);
 
-
+  
   // Weather
   useEffect(() => {
     const fetchWeather = async () => {
@@ -346,108 +391,6 @@ export default function Customer() {
   useEffect(() => { localStorage.setItem('bobaViewMode', viewMode);     }, [viewMode]);
   useEffect(() => { localStorage.setItem('bobaTextSize', String(textSize)); }, [textSize]);
 
-  // Persist language choice across reloads
-  useEffect(() => {
-    localStorage.setItem('bobaLanguage', language);
-  }, [language]);
-
-  // Translate menu data and UI strings via our backend whenever the language
-  // changes or the menu data lands. English is a no-op (we just clear the
-  // translated state and the UI falls back to the original strings via
-  // `translatedX[id] || x.name`).
-  useEffect(() => {
-    if (language === 'en') {
-      setUiText(DEFAULT_UI_TEXT);
-      setTranslatedCategories({});
-      setTranslatedDrinks({});
-      setTranslatedToppings({});
-      return;
-    }
-
-    // Wait until menu data has loaded so we send everything in one batch
-    if (categories.length === 0 || drinks.length === 0 || toppings.length === 0) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const translateAll = async () => {
-      // Build one flat array of strings to translate, then slice the response
-      // back into the four shape-specific buckets the UI expects. Order
-      // matters here — we use index offsets to demux the response.
-      const uiKeys = Object.keys(DEFAULT_UI_TEXT);
-      const uiValues = uiKeys.map((k) => DEFAULT_UI_TEXT[k]);
-      const categoryNames = categories.map((c) => c.category_name);
-      const drinkNames = drinks.map((d) => d.drink_name);
-      const toppingNames = toppings.map((t) => t.topping_name);
-
-      const allTexts = [
-        ...uiValues,
-        ...categoryNames,
-        ...drinkNames,
-        ...toppingNames,
-      ];
-
-      try {
-        const target = GOOGLE_TRANSLATE_LANGUAGES[language] || language;
-        const res = await fetch(toApiUrl('/api/translate'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ texts: allTexts, target }),
-        });
-
-        if (!res.ok) {
-          throw new Error(`Translation request failed: ${res.status}`);
-        }
-
-        const data = await res.json();
-        const translations = data.translations;
-
-        if (cancelled) return;
-        if (!Array.isArray(translations) || translations.length !== allTexts.length) {
-          throw new Error('Unexpected translation response shape');
-        }
-
-        let offset = 0;
-
-        const newUiText = {};
-        uiKeys.forEach((key, i) => {
-          newUiText[key] = translations[offset + i];
-        });
-        offset += uiKeys.length;
-
-        const newCategories = {};
-        categories.forEach((c, i) => {
-          newCategories[c.category_id] = translations[offset + i];
-        });
-        offset += categories.length;
-
-        const newDrinks = {};
-        drinks.forEach((d, i) => {
-          newDrinks[d.drink_id] = translations[offset + i];
-        });
-        offset += drinks.length;
-
-        const newToppings = {};
-        toppings.forEach((t, i) => {
-          newToppings[t.topping_id] = translations[offset + i];
-        });
-
-        setUiText(newUiText);
-        setTranslatedCategories(newCategories);
-        setTranslatedDrinks(newDrinks);
-        setTranslatedToppings(newToppings);
-      } catch (err) {
-        console.error('Translation failed, keeping English:', err);
-      }
-    };
-
-    translateAll();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [language, categories, drinks, toppings]);
 
 
   useEffect(() => {
@@ -464,23 +407,87 @@ export default function Customer() {
     };
   }, []);
 
-
+  
   // Filters
+  const getFeaturedCategoryId = () => {
+    return categories.find((c) => c.category_name === 'Featured')?.category_id;
+  };
+
+  const getWeatherRecommendedDrinks = () => {
+    return drinks.filter((drink) => {
+      const reason = getWeatherRecommendationReason(drink);
+      return reason !== null;
+    });
+  };
+
   const filteredDrinks = selectedCategory
-    ? drinks.filter((d) => d.category_id === selectedCategory)
+    ? selectedCategory === getFeaturedCategoryId()
+      ? getWeatherRecommendedDrinks()
+      : drinks.filter((d) => d.category_id === selectedCategory)
     : drinks;
 
-
+  
   const presetCategoryNames = INGREDIENT_STYLE_PRESETS.find(
     (p) => p.id === ingredientStylePreset
   )?.categoryNames;
 
   const ingredientQuery = ingredientSearch.trim().toLowerCase();
 
-  const displayDrinks = filteredDrinks.filter((d) => {
+  const categoryButtonOrder = [
+    'Milk Tea',
+    'Fruit Tea',
+    'Fresh Milk',
+    'Ice Blended',
+    'Mojito',
+    'Hot Drinks',
+    'Brewed Tea',
+    'Coffee',
+    'Seasonal',
+    'Featured',
+  ];
+
+  const orderedCategories = [...categories].sort((left, right) => {
+    const leftIndex = categoryButtonOrder.indexOf(left.category_name);
+    const rightIndex = categoryButtonOrder.indexOf(right.category_name);
+
+    const normalizedLeftIndex = leftIndex === -1 ? categoryButtonOrder.length : leftIndex;
+    const normalizedRightIndex = rightIndex === -1 ? categoryButtonOrder.length : rightIndex;
+
+    if (normalizedLeftIndex !== normalizedRightIndex) {
+      return normalizedLeftIndex - normalizedRightIndex;
+    }
+
+    return left.category_name.localeCompare(right.category_name);
+  });
+
+  const hasBlockedIngredient = (item, blockedIngredients) => {
+    const ingredients = item.ingredients || [];
+
+    return ingredients.some((ingredient) =>
+      blockedIngredients.includes(ingredient)
+    );
+  };
+
+  const activeAllergyRule = allergyFilter ? ALLERGY_RULES[allergyFilter] : null;
+
+  const cartHasBlockedAllergen =
+    activeAllergyRule &&
+    cart.some((item) =>
+      hasBlockedIngredient(item.drink, activeAllergyRule.blockedIngredients)
+    );
+
+    const displayDrinks = filteredDrinks.filter((d) => {
+    if (
+      activeAllergyRule &&
+      hasBlockedIngredient(d, activeAllergyRule.blockedIngredients)
+    ) {
+      return false;
+    }
+
     if (presetCategoryNames && !presetCategoryNames.includes(d.category_name)) {
       return false;
     }
+
     if (ingredientQuery) {
       const name = (d.drink_name || '').toLowerCase();
       const cat = (d.category_name || '').toLowerCase();
@@ -489,67 +496,59 @@ export default function Customer() {
         return false;
       }
     }
+
     return true;
   });
 
-  // Speaks `text` using the browser's built-in Web Speech API.
-  // Click the same speaker button while it's speaking to stop.
-  const speakText = (text, id) => {
-    if (!text) return;
-
-    // If user clicked the same button, treat it as stop
-    if (speakingId === id) {
-      window.speechSynthesis.cancel();
-      setSpeakingId(null);
-      return;
+  const displayToppings = toppings.filter((t) => {
+    if (
+      activeAllergyRule &&
+      hasBlockedIngredient(t, activeAllergyRule.blockedIngredients)
+    ) {
+      return false;
     }
 
-    // Cancel anything currently playing
-    window.speechSynthesis.cancel();
+    return true;
+  });
+  
+  // Speech
+const speakText = (text, id) => {
+  if (!text) return;
 
-    const utterance = new SpeechSynthesisUtterance(text);
+  // Cancel any in-progress speech
+  window.speechSynthesis.cancel();
 
-    // Prefer high-quality voices when available; fall back gracefully
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice =
-      voices.find((v) => v.name.includes('Samantha')) ||             // macOS
-      voices.find((v) => v.name.includes('Aria')) ||                 // Windows 11
-      voices.find((v) => v.name.includes('Jenny')) ||                // Windows 11
-      voices.find((v) => v.name.includes('Google US English')) ||    // Chrome
-      voices.find((v) => v.lang === 'en-US' && !v.localService) ||   // any cloud en-US
-      voices.find((v) => v.lang === 'en-US') ||                      // any en-US
-      voices[0];
+  // Toggle off if clicking the same item that's already speaking
+  if (speakingId === id) {
+    setSpeakingId(null);
+    return;
+  }
 
-    if (preferredVoice) {
-      utterance.voice = preferredVoice;
-    }
+  setSpeakingId(id);
 
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1.0;
+  utterance.pitch = 1.0;
+  utterance.volume = 1.0;
 
-    utterance.onend = () => setSpeakingId(null);
-    utterance.onerror = () => setSpeakingId(null);
-
-    setSpeakingId(id);
-    window.speechSynthesis.speak(utterance);
+  utterance.onend = () => setSpeakingId(null);
+  utterance.onerror = (err) => {
+    console.error('Speech synthesis error:', err);
+    setSpeakingId(null);
   };
 
-  // Pre-load voices on mount (Chrome loads them asynchronously).
-  // Also stop any speech if the user navigates away.
-  useEffect(() => {
-    window.speechSynthesis.getVoices();
-    const handleVoicesChanged = () => window.speechSynthesis.getVoices();
-    window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
+  currentAudioRef.current = utterance;
+  window.speechSynthesis.speak(utterance);
+};
 
-    return () => {
-      window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
-      window.speechSynthesis.cancel();
-    };
-  }, []);
-
-
-  const getWeatherRecommendationReason = (drink) => {
+  
+useEffect(() => {
+  return () => {
+    window.speechSynthesis.cancel();
+  };
+}, []);
+  
+  function getWeatherRecommendationReason(drink) {
     if (!weather) return null;
 
     const temp = weather.temp;
@@ -557,14 +556,14 @@ export default function Customer() {
     const category = drink.category_name?.toLowerCase() || '';
     const name = drink.drink_name?.toLowerCase() || '';
 
-
+    
     if (condition.includes('rain')) {
       if (
         category.includes('milk tea') ||
         category.includes('brewed tea') ||
         name.includes('brown sugar')
       ) {
-        return 'Cozy pick for rainy weather';
+        return uiText.cozyPickForRainyWeather;
       }
     }
 
@@ -574,7 +573,7 @@ export default function Customer() {
         category.includes('mojito') ||
         category.includes('ice blended')
       ) {
-        return 'Recommended for hot weather';
+        return uiText.recommendedForHotWeather;
       }
     }
 
@@ -584,21 +583,21 @@ export default function Customer() {
         category.includes('fresh milk') ||
         category.includes('brewed tea')
       ) {
-        return 'Recommended for cooler weather';
+        return uiText.recommendedForCoolerWeather;
       }
     }
 
 
     if (temp > 60 && temp < 80) {
       if (category.includes('milk tea') || category.includes('fruit tea')) {
-        return 'A great pick for today';
+        return uiText.greatPickForToday;
       }
     }
 
     return null;
-  };
+  }
 
-
+  
   const unlockAchievement = (id, icon, text) => {
     setUnlockedAchievements(prev => {
       if (prev.has(id)) return prev;
@@ -608,15 +607,42 @@ export default function Customer() {
     });
   };
 
-
+  
   // Modal
+  const closeCustomizationModal = () => {
+    const wasEditing = editingCartItemId != null;
+    setEditingCartItemId(null);
+    setModal(null);
+    if (wasEditing) {
+      setShowCart(true);
+    }
+  };
+
   const openModal = (drink) => {
+    setEditingCartItemId(null);
     setModal(drink);
-    setCustomization({ sugar: '100', ice: 'NORMAL_ICE', size: 'M', toppings: [] });
+    const initialIce = (drink.category_name === 'Coffee' || drink.category_name === 'Brewed Tea') ? 'HOT' : 'NORMAL_ICE';
+    setCustomization({
+      ...DEFAULT_CUSTOMIZATION,
+      ice: initialIce,
+    });
     setWizardStep(0);
   };
 
+  const beginEditCartItem = (item) => {
+    setShowCart(false);
+    setEditingCartItemId(item.id);
+    setModal(item.drink);
+    setCustomization({
+      sugar: String(item.sweetness_level),
+      ice: item.ice_level,
+      size: item.size,
+      toppings: [...item.toppings],
+    });
+    setWizardStep(0);
+  };
 
+  
   const toggleTopping = (id) => {
     setCustomization((prev) => ({
       ...prev,
@@ -626,23 +652,31 @@ export default function Customer() {
     }));
   };
 
-
+  
   // Pricing
   const getSubtotal = (drink, selectedToppingIds, size = 'M') => {
     const toppingCost = selectedToppingIds.reduce((sum, tid) => {
-
+      
       const t = toppings.find((t) => t.topping_id === tid);
 
-
+      
       return sum + (t ? parseFloat(t.topping_price) : 0);
     }, 0);
 
-
+    
     const sizeMultiplier = SIZE_MULTIPLIERS[size] || 1.0;
     return (parseFloat(drink.base_price) + toppingCost) * sizeMultiplier;
   };
 
+  const getSizePriceAdjustment = (drink, size) => {
+    if (!drink || !size) return 0;
+    const basePrice = parseFloat(drink.base_price);
+    const basePriceWithM = basePrice * 1.0;
+    const priceWithSize = basePrice * (SIZE_MULTIPLIERS[size] || 1.0);
+    return Number((priceWithSize - basePriceWithM).toFixed(2));
+  };
 
+  
   const isDealEligibleForItem = (item, deal) => {
     if (!item || !deal) {
       return false;
@@ -717,7 +751,7 @@ export default function Customer() {
     setPendingWheelDeal(null);
   };
 
-
+  
   const spinWheel = () => {
     if (wheelSpinning || wheelHasSpunThisLoad) {
       return;
@@ -752,34 +786,55 @@ export default function Customer() {
     setUnclaimedWheelDeal(null);
   };
 
-
+  
   // Cart
   const addToCart = () => {
     const total = getSubtotal(modal, customization.toppings, customization.size);
 
-    const baseCartItem = {
+    if (editingCartItemId != null) {
+      setCart((prev) =>
+        prev.map((i) =>
+          i.id === editingCartItemId
+            ? {
+                ...i,
+                sweetness_level: customization.sugar,
+                ice_level: customization.ice,
+                size: customization.size,
+                toppings: [...customization.toppings],
+                total_price: total,
+              }
+            : i
+        )
+      );
+      setEditingCartItemId(null);
+      setModal(null);
+      setShowCart(true);
+      return;
+    }
 
+    const baseCartItem = {
+      
       id: Date.now(),
 
-
+      
       drink: modal,
 
-
+      
       qty: 1,
 
-
+      
       sweetness_level: customization.sugar,
       ice_level: customization.ice,
       size: customization.size,
       toppings: customization.toppings,
 
-
+      
       total_price: total,
     };
 
     setCart((prev) => [...prev, baseCartItem]);
 
-
+    
     if (funMode) {
       setBobaPoints(prev => prev + 10);
       setPointsFlash(true);
@@ -800,11 +855,11 @@ export default function Customer() {
     setModal(null);
   };
 
-
+  
   const removeFromCart = (id) =>
     setCart((prev) => prev.filter((i) => i.id !== id));
 
-
+  
   const updateQuantity = (id, newQty) => {
     if (newQty <= 0) {
       removeFromCart(id);
@@ -815,7 +870,7 @@ export default function Customer() {
     ));
   };
 
-
+  
   const cartTotal = cart.reduce((sum, i) => sum + i.total_price * i.qty, 0);
   const discountedCartTotal = cart.reduce(
     (sum, i) => sum + getDiscountedUnitPrice(i) * i.qty,
@@ -825,7 +880,7 @@ export default function Customer() {
     ? cart.filter((item) => isDealEligibleForItem(item, claimedWheelCoupon))
     : [];
 
-
+  
   useEffect(() => {
     if (!claimedWheelCoupon) {
       return;
@@ -863,20 +918,123 @@ export default function Customer() {
     pendingWheelDeal,
   ]);
 
+  // Language switching via API
+  const handleLanguageChange = async (newLang) => {
+    if (newLang === 'en') {
+      // English: just reset to defaults
+      setLanguageState('en');
+      setUiText(DEFAULT_UI_TEXT);
+      setTranslatedCategories({});
+      setTranslatedDrinks({});
+      setTranslatedToppings({});
+      return;
+    }
+
+    // Map user-facing language codes to API language codes
+    const langMap = { es: 'es', fr: 'fr', hi: 'hi', zh: 'zh-CN' };
+    const apiLang = langMap[newLang] || newLang;
+
+    try {
+      // Collect all text to translate
+      const textsToTranslate = [
+        ...Object.values(DEFAULT_UI_TEXT),
+        ...categories.map((c) => c.category_name),
+        ...drinks.map((d) => d.drink_name),
+        ...toppings.map((t) => t.topping_name),
+      ];
+
+      // Call translation API
+      const response = await fetch(toApiUrl('/api/translate'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ texts: textsToTranslate, target: apiLang }),
+      });
+
+      if (!response.ok) throw new Error('Translation failed');
+
+      const data = await response.json();
+      const translations = data.translations || [];
+
+      // Map translations back to their sources
+      let idx = 0;
+      const translatedText = {};
+      Object.keys(DEFAULT_UI_TEXT).forEach((key) => {
+        translatedText[key] = translations[idx++];
+      });
+
+      const catMap = {};
+      categories.forEach((c) => {
+        catMap[c.category_id] = translations[idx++];
+      });
+
+      const drinkMap = {};
+      drinks.forEach((d) => {
+        drinkMap[d.drink_id] = translations[idx++];
+      });
+
+      const toppingMap = {};
+      toppings.forEach((t) => {
+        toppingMap[t.topping_id] = translations[idx++];
+      });
+
+      // Update state
+      setLanguageState(newLang);
+      setUiText(translatedText);
+      setTranslatedCategories(catMap);
+      setTranslatedDrinks(drinkMap);
+      setTranslatedToppings(toppingMap);
+    } catch (err) {
+      console.error('Language switch failed:', err);
+      setApiError('Failed to switch language. Please try again.');
+    }
+  };
+
+  const assistantQuickPrompts = useMemo(() => [
+    uiText.chatbotQ1,
+    uiText.chatbotQ2,
+    uiText.chatbotQ3,
+    uiText.chatbotQ4,
+  ], [uiText]);
+
+  const validateCheckoutPayment = () => {
+    if (!paymentName.trim()) return 'Please enter the name on the card.';
+    if (!paymentCard.trim()) return 'Please enter a card number.';
+    if (!paymentExpiry.trim()) return 'Please enter an expiry date.';
+    if (!paymentCvv.trim()) return 'Please enter a CVV.';
+    return '';
+  };
+
+  const resetCheckoutForm = () => {
+    setPaymentName('');
+    setPaymentCard('');
+    setPaymentExpiry('');
+    setPaymentCvv('');
+    setCheckoutError('');
+  };
+
+  const submitCheckoutOrder = async () => {
+    const err = validateCheckoutPayment();
+    if (err) {
+      setCheckoutError(err);
+      return;
+    }
+    setCheckoutError('');
+    await placeOrder();
+  };
 
   // Order
   const placeOrder = async () => {
-
+    
     if (cart.length === 0 || placingOrder) {
       return;
     }
 
     try {
-
+      
       setPlacingOrder(true);
       setApiError('');
 
-
+      
       const payload = {
         user_id: 1,
         items: cart.map((item) => ({
@@ -884,34 +1042,38 @@ export default function Customer() {
           qty: item.qty,
           sweetness_level: item.sweetness_level,
           ice_level: item.ice_level,
+          size: item.size,
           drink_unit_price: Number(item.drink.base_price),
           toppings: item.toppings,
           total_price: Number((getDiscountedUnitPrice(item) * item.qty).toFixed(2)),
         })),
       };
 
-
+      
       const res = await fetch(toApiUrl('/api/customer/order'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-
+      
       if (!res.ok) {
-        throw new Error('Failed to place order');
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to place order');
       }
 
-
+      
       setCart([]);
       setClaimedWheelCoupon(null);
       setCouponApplyEnabled(true);
       setCouponAppliedItemId(null);
       setPendingWheelDeal(null);
       setShowCart(false);
+      setShowCheckout(false);
+      resetCheckoutForm();
       setOrderPlaced(true);
 
-
+      
       setTimeout(() => setOrderPlaced(false), 4000);
       if (funMode) {
         setBobaPoints(prev => prev + 50);
@@ -928,22 +1090,22 @@ export default function Customer() {
         unlockAchievement('firstOrder', '🎮', 'Order Champion!');
       }
     } catch (err) {
-
+      
       console.error(err);
 
-
-      setApiError('Could not place order. Please try again.');
+      
+      setApiError(err.message || 'Could not place order. Please try again.');
     } finally {
-
+      
       setPlacingOrder(false);
     }
   };
 
-
+  
   const getSugarLabel = (val) =>
     SUGAR_LEVELS.find((s) => s.value === val)?.label || val;
 
-
+  
   const getIceLabel = (val) => {
     if (val === 'HOT') return uiText.hot || 'Hot';
     return getIceDisplayLabel(val);
@@ -968,12 +1130,29 @@ export default function Customer() {
   const getToppingDisplayName = (topping) =>
     translatedToppings[topping.topping_id] || topping.topping_name;
 
+  const getDrinkDisplayLabel = (drink) => {
+    const base = translatedDrinks[drink.drink_id] || drink.drink_name;
+    const categoryName = drink.category_name || '';
+    if (categoryName === 'Coffee' || categoryName === 'Brewed Tea') {
+      return `${base} (Hot)`;
+    }
+    return base;
+  };
 
+  const getCategoryDisplayName = (category) => {
+    const base = translatedCategories[category.category_id] || category.category_name;
+    if (category.category_name === 'Coffee' || category.category_name === 'Brewed Tea') {
+      return `${base} (Hot)`;
+    }
+    return base;
+  };
+
+  
   const translateText = async (text) => text;
 
   const translateBatch = async (texts) => texts;
 
-
+  
   const currentCategoryName =
     selectedCategory === null
       ? uiText.all
@@ -992,66 +1171,66 @@ export default function Customer() {
     }
   };
 
-
+  
   // Assistant
   const sendAssistantMessage = async (prompt) => {
     const messageText = (prompt ?? assistantInput).trim();
 
-
+    
     if (!messageText || assistantLoading) {
       return;
     }
 
-
+    
     const nextMessages = [
       ...assistantMessages,
       { role: 'user', content: messageText },
     ];
 
-
+    
     setAssistantMessages(nextMessages);
 
-
+    
     setAssistantInput('');
     setAssistantLoading(true);
     setAssistantError('');
 
     try {
-
+      
       const response = await fetch(toApiUrl('/api/assistant/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: nextMessages }),
       });
 
-
+      
       if (!response.ok) {
         throw new Error('Assistant request failed');
       }
 
-
+      
       const data = await response.json();
 
-
+      
       setAssistantMessages((currentMessages) => [
         ...currentMessages,
         { role: 'assistant', content: data.reply },
       ]);
     } catch (err) {
-
+      
       console.error(err);
 
-
+      
       setAssistantError(
         'The assistant could not respond right now. Please try again.'
       );
     } finally {
-
+      
       setAssistantLoading(false);
     }
   };
 
-
+  
   const TEXT_SCALES = [1, 1.25, 1.55];
   const ts = TEXT_SCALES[textSize];
   const wheelGradient = `conic-gradient(${WHEEL_DEALS.map((deal, index) => {
@@ -1060,17 +1239,6 @@ export default function Customer() {
     return `${deal.color} ${start}deg ${end}deg`;
   }).join(', ')})`;
 
-  const assistantPlaceholder =
-    language === 'es'
-      ? 'Pregunta sobre el menú...'
-      : language === 'fr'
-      ? 'Demandez sur le menu...'
-      : language === 'hi'
-      ? 'मेनू के बारे में पूछें...'
-      : language === 'zh'
-      ? '询问菜单...'
-      : 'Ask something about the menu or ordering...';
-
   // Render
   return (
     <div style={s.root}>
@@ -1078,47 +1246,56 @@ export default function Customer() {
         Skip to drinks
       </a>
       <style>{`
+        /* Keeps skip link visible during keyboard focus. */
         .customer-skip-link:focus,
         .customer-skip-link:focus-visible {
           left: 1rem !important;
           outline: 3px solid #c8773a;
           outline-offset: 2px;
         }
+        /* Animates points badge pop effect. */
         @keyframes pointsPop {
           0%   { transform: scale(1); }
           50%  { transform: scale(1.5); }
           100% { transform: scale(1); }
         }
+        /* Adds smooth button movement and shadow. */
         .fun-btn {
           transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
         }
+        /* Enlarges fun buttons on hover. */
         .fun-btn:hover {
           transform: scale(1.07);
           box-shadow: 0 4px 14px rgba(200, 119, 58, 0.4);
         }
+        /* Shrinks fun buttons when clicked. */
         .fun-btn:active {
           transform: scale(0.91);
           transition: transform 0.08s ease;
         }
+        /* Adds smooth card hover readiness. */
         .fun-card {
           transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
         }
+        /* Applies points pop animation class. */
         .points-pop {
           display: inline-block;
           animation: pointsPop 600ms ease-out;
         }
+        /* Slides achievement toast in and out. */
         @keyframes achievementSlide {
           0%   { transform: translateX(120%); opacity: 0; }
           15%  { transform: translateX(0);    opacity: 1; }
           80%  { transform: translateX(0);    opacity: 1; }
           100% { transform: translateX(120%); opacity: 0; }
         }
+        /* Applies achievement toast animation. */
         .achievement-toast {
           animation: achievementSlide 3.2s ease forwards;
         }
       `}</style>
 
-
+      
       <div style={s.navShell}>
         <header style={s.header}>
           <div style={s.headerInner}>
@@ -1138,14 +1315,57 @@ export default function Customer() {
                   <span style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>
                     {weather.temp}°F
                   </span>
+<<<<<<< HEAD
+                  <span style={{ fontSize: '0.8rem', opacity: 1 }}>
+=======
                   <span style={{ fontSize: '0.8rem', color: '#fefcf8' }}>
+>>>>>>> mindi-managerImprovements
                     {weather.description}
                   </span>
                 </div>
               )}
 
+              <label htmlFor="language-select" style={{ position: 'absolute', left: '-9999px' }}>
+                Select Language
+              </label>
               <select
+                id="language-select"
                 value={language}
+<<<<<<< HEAD
+                onChange={(e) => {
+                  const lang = e.target.value;
+                  if (lang === language) return;
+                  handleLanguageChange(lang);
+                }}
+                style={{
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  padding: '0.6rem 2.2rem 0.6rem 0.8rem',
+                  borderRadius: '10px',
+                  border: '2px solid #e8f4f8',
+                  backgroundColor: '#f0fafb',
+                  color: '#002f47',
+                  fontWeight: '700',
+                  fontSize: '0.88rem',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  boxShadow: '0 4px 12px rgba(13, 90, 111, 0.12)',
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%230d5a6f' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 0.7rem center',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.borderColor = '#4a90a4';
+                  e.target.style.backgroundColor = '#e8f4f8';
+                  e.target.style.boxShadow = '0 6px 16px rgba(13, 90, 111, 0.18)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.borderColor = '#e8f4f8';
+                  e.target.style.backgroundColor = '#f0fafb';
+                  e.target.style.boxShadow = '0 4px 12px rgba(13, 90, 111, 0.12)';
+=======
                 onChange={(e) => setLanguage(e.target.value)}
                 style={{
                   padding: '0.4rem',
@@ -1154,14 +1374,14 @@ export default function Customer() {
                   fontWeight: 'bold',
                   background: '#fff',
                   color: BROWN,
+>>>>>>> mindi-managerImprovements
                 }}
-                aria-label="Select language"
               >
-                <option value="en">English</option>
-                <option value="es">Spanish</option>
-                <option value="fr">French</option>
-                <option value="hi">Hindi</option>
-                <option value="zh">Chinese</option>
+                <option value="en">🌐 English</option>
+                <option value="es">🌐 Spanish</option>
+                <option value="fr">🌐 French</option>
+                <option value="hi">🌐 Hindi</option>
+                <option value="zh">🌐 Chinese</option>
               </select>
             </div>
 
@@ -1182,57 +1402,55 @@ export default function Customer() {
                   type="button"
                   style={s.featureMenuBtn}
                   onClick={() => setShowFeatureMenu((prev) => !prev)}
-                  aria-haspopup="true"
-                  aria-expanded={showFeatureMenu}
                 >
-                  ✨ Features
+                  ✨ {uiText.features} <span style={{ fontSize: '0.7rem', marginLeft: '0.3rem' }}>▼</span>
                 </button>
 
                 {showFeatureMenu && (
-                  <div style={s.featureDropdown} role="menu">
+                  <div style={s.featureDropdown} role="menu" aria-label="Features menu">
                     <button
                       type="button"
-                      role="menuitem"
                       style={s.featureMenuItem}
-                      onClick={() => {
-                        setShowFeatureMenu(false);
-                        setShowAssistant(true);
-                      }}
-                    >
-                      💬 Ask Assistant
-                    </button>
-                    <button
-                      type="button"
                       role="menuitem"
-                      style={s.featureMenuItem}
                       onClick={() => {
-                        setShowFeatureMenu(false);
                         setShowWheel(true);
+                        setShowFeatureMenu(false);
                       }}
                     >
-                      🎡 Spin the Wheel
+                      🎡 {uiText.spinTheWheel}
                     </button>
                     <button
                       type="button"
-                      role="menuitem"
                       style={s.featureMenuItem}
+                      role="menuitem"
                       onClick={() => {
-                        setShowFeatureMenu(false);
                         setShowAllergyGuide(true);
-                      }}
-                    >
-                      ⚠️ Allergy Guide
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      style={s.featureMenuItem}
-                      onClick={() => {
-                        setFunMode((prev) => !prev);
                         setShowFeatureMenu(false);
                       }}
                     >
-                      🎮 {funMode ? 'Disable Fun Mode' : 'Enable Fun Mode'}
+                      ⚠️ {uiText.allergyGuide}
+                    </button>
+                    <button
+                      type="button"
+                      style={s.featureMenuItem}
+                      role="menuitem"
+                      onClick={() => {
+                        setShowAssistant(true);
+                        setShowFeatureMenu(false);
+                      }}
+                    >
+                      🤖 {uiText.chatbot}
+                    </button>
+                    <button
+                      type="button"
+                      style={s.featureMenuItem}
+                      role="menuitem"
+                      onClick={() => {
+                        setFunMode(!funMode);
+                        setShowFeatureMenu(false);
+                      }}
+                    >
+                      🎉 {funMode ? uiText.disable : uiText.enable} {uiText.funMode}
                     </button>
                   </div>
                 )}
@@ -1243,18 +1461,15 @@ export default function Customer() {
                 style={s.cartBtn}
                 onClick={() => setShowCart(true)}
               >
-                🛒 Cart {cart.length > 0 && <span style={s.cartBadge}>{cart.length}</span>}
+                🛒 {uiText.cart} {cart.length > 0 && <span style={s.cartBadge}>{cart.length}</span>}
               </button>
             </div>
           </div>
 
           <div style={s.categoryBarWrap}>
-            <p style={s.categoryBarLabel} id="category-nav-label">
-              {uiText.browseByCategory || 'Browse by category'}
-            </p>
-            <nav style={s.categoryBar} aria-labelledby="category-nav-label">
+            <nav style={s.categoryBar} aria-label="Browse categories">
               <button
-                style={{ ...s.catBtn, ...(selectedCategory === null ? s.catBtnActive : {}), fontSize: `${0.78 * ts}rem` }}
+                style={{ ...s.catBtn, ...(selectedCategory === null ? s.catBtnActive : {}), fontSize: `${0.72 * ts}rem` }}
                 onClick={() => setSelectedCategory(null)}
                 aria-pressed={selectedCategory === null}
                 aria-label="Show all categories"
@@ -1262,80 +1477,90 @@ export default function Customer() {
                 {uiText.all}
               </button>
 
-              {categories.map((cat) => (
+              {orderedCategories.map((cat) => (
                 <button
                   key={cat.category_id}
-                  style={{ ...s.catBtn, ...(selectedCategory === cat.category_id ? s.catBtnActive : {}), fontSize: `${0.78 * ts}rem` }}
+                  style={{ ...s.catBtn, ...(selectedCategory === cat.category_id ? s.catBtnActive : {}), fontSize: `${0.72 * ts}rem` }}
                   onClick={() => setSelectedCategory(cat.category_id)}
                   aria-pressed={selectedCategory === cat.category_id}
                   aria-label={`Show ${cat.category_name} drinks`}
                 >
-                  {categoryEmojis[cat.category_name] || '🍹'} {translatedCategories[cat.category_id] || cat.category_name}
+                  {categoryEmojis[cat.category_name] || '🍹'} {getCategoryDisplayName(cat)}
                 </button>
               ))}
             </nav>
           </div>
 
-
-          <div style={s.controlsBar}>
-            <div style={s.controlsBarInner}>
-              <div style={s.controlCluster}>
-                <span style={s.controlClusterLabel}>Layout</span>
-                <div style={s.viewToggleGroup} role="group" aria-label="View mode">
-                  <button
-                    style={{ ...s.viewBtn, ...(viewMode === 'grid' ? s.viewBtnActive : {}) }}
-                    onClick={() => setViewMode('grid')}
-                    aria-pressed={viewMode === 'grid'}
-                    aria-label="Grid view"
-                    title="Grid view"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true">
-                      <rect x="0" y="0" width="7" height="7" rx="1.5" />
-                      <rect x="11" y="0" width="7" height="7" rx="1.5" />
-                      <rect x="0" y="11" width="7" height="7" rx="1.5" />
-                      <rect x="11" y="11" width="7" height="7" rx="1.5" />
-                    </svg>
-                  </button>
-                  <button
-                    style={{ ...s.viewBtn, ...(viewMode === 'list' ? s.viewBtnActive : {}) }}
-                    onClick={() => setViewMode('list')}
-                    aria-pressed={viewMode === 'list'}
-                    aria-label="List view"
-                    title="List view"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true">
-                      <rect x="0" y="1" width="18" height="4" rx="1.5" />
-                      <rect x="0" y="7" width="18" height="4" rx="1.5" />
-                      <rect x="0" y="13" width="18" height="4" rx="1.5" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-
-              <div style={s.controlCluster}>
-                <span style={s.controlClusterLabel}>Text</span>
-                <div style={s.sizeGroup} role="group" aria-label="Text size">
-                  <button
-                    style={s.sizeBtn}
-                    onClick={() => setTextSize((prev) => Math.max(0, prev - 1))}
-                    aria-label="Decrease text size"
-                    disabled={textSize === 0}
-                  >
-                    <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>A</span>
-                  </button>
-                  <button
-                    style={s.sizeBtn}
-                    onClick={() => setTextSize((prev) => Math.min(2, prev + 1))}
-                    aria-label="Increase text size"
-                    disabled={textSize === 2}
-                  >
-                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>A</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
         </header>
+      </div>
+
+      <section aria-label="Menu controls and filters" style={{ paddingTop: '0.5rem' }}>
+      <div style={s.categoryControls}>
+        <div style={s.controlClusterSide}>
+          <div style={s.viewToggleGroup} role="group" aria-label="View mode">
+            <button
+              style={{ ...s.viewBtn, ...(viewMode === 'grid' ? s.viewBtnActive : {}) }}
+              onClick={() => setViewMode('grid')}
+              aria-pressed={viewMode === 'grid'}
+              aria-label="Grid view"
+              title="Grid view"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true">
+                <rect x="0" y="0" width="7" height="7" rx="1.5" />
+                <rect x="11" y="0" width="7" height="7" rx="1.5" />
+                <rect x="0" y="11" width="7" height="7" rx="1.5" />
+                <rect x="11" y="11" width="7" height="7" rx="1.5" />
+              </svg>
+            </button>
+            <button
+              style={{ ...s.viewBtn, ...(viewMode === 'list' ? s.viewBtnActive : {}) }}
+              onClick={() => setViewMode('list')}
+              aria-pressed={viewMode === 'list'}
+              aria-label="List view"
+              title="List view"
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true">
+                <rect x="0" y="1" width="18" height="4" rx="1.5" />
+                <rect x="0" y="7" width="18" height="4" rx="1.5" />
+                <rect x="0" y="13" width="18" height="4" rx="1.5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              style={{
+                ...s.catBtn,
+                ...(allergyFilter === 'dairy' ? s.catBtnActive : {}),
+              }}
+              onClick={() =>
+                setAllergyFilter((prev) => (prev === 'dairy' ? null : 'dairy'))
+              }
+              aria-pressed={allergyFilter === 'dairy'}
+            >
+              🥛 No Dairy
+            </button>
+          </div>
+        </div>
+
+        <div style={s.controlClusterSide}>
+          <div style={s.sizeGroup} role="group" aria-label="Text size">
+            <button
+              style={s.sizeBtn}
+              onClick={() => setTextSize((prev) => Math.max(0, prev - 1))}
+              aria-label="Decrease text size"
+              disabled={textSize === 0}
+            >
+              <span style={{ fontSize: '0.85rem', fontWeight: 'bold' }}>A</span>
+            </button>
+            <button
+              style={s.sizeBtn}
+              onClick={() => setTextSize((prev) => Math.min(2, prev + 1))}
+              aria-label="Increase text size"
+              disabled={textSize === 2}
+            >
+              <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>A</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <p style={s.visuallyHidden} role="status" aria-live="polite">
@@ -1347,6 +1572,7 @@ export default function Customer() {
 
       {loadingMenu && <p style={s.statusMessage}>{uiText.loadingMenu}</p>}
       {apiError && <p style={s.errorMessage}>{apiError}</p>}
+      </section>
 
       <main
         id="drink-grid"
@@ -1357,6 +1583,7 @@ export default function Customer() {
           <button
             key={drink.drink_id}
             style={s.listCard}
+
             className={funMode ? 'fun-card' : ''}
             onClick={() => openModal(drink)}
             aria-label={`${translatedDrinks[drink.drink_id] || drink.drink_name}, ${drink.category_name}, ${parseFloat(drink.base_price).toFixed(2)} dollars. Open customization.`}
@@ -1372,57 +1599,59 @@ export default function Customer() {
             {getWeatherRecommendationReason(drink) && (<div style={s.weatherRecommendation}> ☁️ {getWeatherRecommendationReason(drink)}</div>)}
           </button>
         ) : (
-          <button
-            key={drink.drink_id}
-            style={s.drinkCard}
-            className={funMode ? 'fun-card' : ''}
-            onClick={() => openModal(drink)}
-            aria-label={`${translatedDrinks[drink.drink_id] || drink.drink_name}, ${drink.category_name}, ${parseFloat(
-              drink.base_price
-            ).toFixed(2)} dollars. Open customization.`}
-          >
-            <div style={{ ...(funMode ? s.drinkEmojiLarge : s.drinkEmoji), fontSize: `${(funMode ? 3.8 : 2.5) * ts}rem` }}>{categoryEmojis[drink.category_name] || '🍹'}</div>
-            <div style={{ ...s.drinkName,     fontSize: `${0.95 * ts}rem` }}>{translatedDrinks[drink.drink_id] || drink.drink_name}</div>
-            <div style={{ ...s.drinkCategory, fontSize: `${0.75 * ts}rem` }}>
-              {translatedCategories[drink.category_id] || drink.category_name}
-            </div>
-            <div style={s.drinkPriceRow}>
-              <div style={{ ...s.drinkPrice, fontSize: `${1.1 * ts}rem` }}>
-                ${parseFloat(drink.base_price).toFixed(2)}
-              </div>
-              <span
-                role="button"
-                tabIndex={0}
-                style={s.speakBtn}
-                onClick={(e) => {
-                  e.stopPropagation();
+          <div key={drink.drink_id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', width: '100%' }}>
+            <button
+              type="button"
+              style={{
+                ...s.speakBtn,
+                padding: '0.5rem 0.6rem',
+                minWidth: 'auto',
+              }}
+              onClick={() => {
+                speakText(
+                  `${drink.drink_name}. ${drink.category_name}. ${parseFloat(drink.base_price).toFixed(2)} dollars.`,
+                  drink.drink_id
+                );
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
                   speakText(
                     `${drink.drink_name}. ${drink.category_name}. ${parseFloat(drink.base_price).toFixed(2)} dollars.`,
                     drink.drink_id
                   );
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    speakText(
-                      `${drink.drink_name}. ${drink.category_name}. ${parseFloat(drink.base_price).toFixed(2)} dollars.`,
-                      drink.drink_id
-                    );
-                  }
-                }}
-                aria-label={`Read ${drink.drink_name} aloud`}
-                title={speakingId === drink.drink_id ? 'Stop' : 'Read aloud'}
-              >
-                {speakingId === drink.drink_id ? '⏸️' : '🔊'}
-              </span>
-            </div>
-            {getWeatherRecommendationReason(drink) && (
-              <div style={s.weatherRecommendation}> ☁️ {getWeatherRecommendationReason(drink)} </div>
-            )}
-          </button>
+                }
+              }}
+              aria-label={`Read ${drink.drink_name} aloud`}
+              title={speakingId === drink.drink_id ? 'Stop' : 'Read aloud'}
+            >
+              {speakingId === drink.drink_id ? '⏸️' : '🔊'}
+            </button>
+            <button
+              style={s.drinkCard}
+              className={funMode ? 'fun-card' : ''}
+              onClick={() => openModal(drink)}
+              aria-label={`${translatedDrinks[drink.drink_id] || drink.drink_name}, ${drink.category_name}, ${parseFloat(
+                drink.base_price
+              ).toFixed(2)} dollars. Open customization.`}
+            >
+              <div style={{ ...(funMode ? s.drinkEmojiLarge : s.drinkEmoji), fontSize: `${(funMode ? 3.8 : 2.5) * ts}rem` }}>{categoryEmojis[drink.category_name] || '🍹'}</div>
+              <div style={{ ...s.drinkName,     fontSize: `${0.95 * ts}rem` }}>{translatedDrinks[drink.drink_id] || drink.drink_name}</div>
+              <div style={{ ...s.drinkCategory, fontSize: `${0.75 * ts}rem` }}>
+                {translatedCategories[drink.category_id] || drink.category_name}
+              </div>
+              <div style={s.drinkPriceRow}>
+                <div style={{ ...s.drinkPrice, fontSize: `${1.1 * ts}rem` }}>
+                  ${parseFloat(drink.base_price).toFixed(2)}
+                </div>
+              </div>
+              {getWeatherRecommendationReason(drink) && (
+                <div style={s.weatherRecommendation}> ☁️ {getWeatherRecommendationReason(drink)} </div>
+              )}
+            </button>
+          </div>
         ))}
-
+        
         {!loadingMenu && !apiError && displayDrinks.length === 0 && (
           <p style={s.emptyFilterMessage}>
             No drinks match your filters. Try another category, clear the style shortcut, or adjust your search.
@@ -1430,11 +1659,17 @@ export default function Customer() {
         )}
       </main>
 
-
+      
       {modal && (
-        <div style={s.overlay} onClick={() => setModal(null)}>
+        <div style={s.overlay} onClick={closeCustomizationModal}>
           <div
-            style={funMode ? s.wizardBox : s.modalBox}
+            style={
+              funMode
+                ? s.wizardBox
+                : editingCartItemId
+                  ? { ...s.modalBox, position: 'relative', paddingTop: '3rem' }
+                  : { ...s.modalBox, position: 'relative' }
+            }
             onClick={e => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -1442,7 +1677,28 @@ export default function Customer() {
           >
             {funMode ? (
               <>
-                <button style={s.wizardCloseBtn} onClick={() => setModal(null)} aria-label="Exit customization">✕</button>
+                {editingCartItemId ? (
+                  <>
+                    <button
+                      type="button"
+                      style={s.customizeEditBackBtn}
+                      onClick={closeCustomizationModal}
+                      aria-label={uiText.backToOrder}
+                    >
+                      ←
+                    </button>
+                    <button
+                      type="button"
+                      style={{ ...s.wizardCloseBtn, ...s.wizardCloseBtnRight }}
+                      onClick={closeCustomizationModal}
+                      aria-label="Exit customization"
+                    >
+                      ✕
+                    </button>
+                  </>
+                ) : (
+                  <button style={s.wizardCloseBtn} onClick={closeCustomizationModal} aria-label="Exit customization">✕</button>
+                )}
                 <div style={s.wizardHeader}>
                   <div style={s.wizardBigEmoji}>{categoryEmojis[modal.category_name] || '🍹'}</div>
                   <h2 id="customize-drink-title" style={s.wizardDrinkName}>{translatedDrinks[modal.drink_id] || modal.drink_name}</h2>
@@ -1452,6 +1708,11 @@ export default function Customer() {
                         {WIZARD_SUGAR[customization.sugar].emoji} {getSugarDisplayLabel(customization.sugar)}
                       </span>
                       {wizardStep >= 2 && (
+                        <span style={s.wizardSummaryChip}>
+                          📏 Size {customization.size}
+                        </span>
+                      )}
+                      {wizardStep >= 3 && (
                         <span style={s.wizardSummaryChip}>
                           {WIZARD_ICE[customization.ice].emoji} {getIceDisplayLabel(customization.ice)}
                         </span>
@@ -1464,8 +1725,8 @@ export default function Customer() {
                     </div>
                   )}
                 </div>
-                <div style={s.wizardDots} aria-label={`Step ${wizardStep + 1} of 3`}>
-                  {[0, 1, 2].map(i => (
+                <div style={s.wizardDots} aria-label={`Step ${wizardStep + 1} of 4`}>
+                  {[0, 1, 2, 3].map(i => (
                     <span key={i} style={{ ...s.wizardDot, ...(i === wizardStep ? s.wizardDotActive : {}) }} />
                   ))}
                 </div>
@@ -1477,6 +1738,7 @@ export default function Customer() {
                         { value: '0',   emoji: '🚫', label: 'No Sugar'  },
                         { value: '50',  emoji: '🍬', label: 'A Little'  },
                         { value: '100', emoji: '🍭', label: 'Full Sweet' },
+                        { value: '125', emoji: '🍯', label: 'Extra Sweet' },
                       ].map(({ value, emoji, label }) => (
                         <button
                           key={value}
@@ -1486,18 +1748,58 @@ export default function Customer() {
                           aria-label={`Sweetness: ${getSugarDisplayLabel(value)}`}
                         >
                           <span style={s.wizardOptEmoji}>{emoji}</span>
-                          <span style={s.wizardOptLabel}>{value === 'HOT' || value.includes('ICE') ? getIceDisplayLabel(value) : getSugarDisplayLabel(value)}</span>
+                          <span style={s.wizardOptLabel}>{getSugarDisplayLabel(value)}</span>
                         </button>
                       ))}
+                    </div>
+                    <div style={s.wizardFooter}>
+                      <span style={s.wizardTotal}>${getSubtotal(modal, customization.toppings, customization.size).toFixed(2)}</span>
                     </div>
                   </div>
                 )}
                 {wizardStep === 1 && (
                   <div style={s.wizardStep}>
+                    <p style={s.wizardQuestion}>What size? 📏</p>
+                    <div style={s.wizardOptions} role="group" aria-label="Size">
+                      {SIZE_LEVELS.map(({ label, value }) => {
+                        const adjustment = getSizePriceAdjustment(modal, value);
+                        const adjustmentStr = adjustment === 0 ? '+$0.00' : (adjustment > 0 ? `+$${adjustment.toFixed(2)}` : `-$${Math.abs(adjustment).toFixed(2)}`);
+                        return (
+                          <button
+                            key={value}
+                            style={{ ...s.wizardOptBtn, ...(customization.size === value ? s.wizardOptBtnActive : {}) }}
+                            onClick={() => { setCustomization(prev => ({ ...prev, size: value })); setWizardStep(2); }}
+                            aria-pressed={customization.size === value}
+                            aria-label={`Size ${label}, ${adjustmentStr}`}
+                          >
+                            <span style={s.wizardOptEmoji}>📏</span>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              <span style={s.wizardOptLabel}>{label}</span>
+                              <span style={{ fontSize: '0.9rem', opacity: 0.9, fontWeight: '600', color: '#c8773a' }}>{adjustmentStr}</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div style={s.wizardFooter}>
+                      <button style={s.wizardBackBtn} onClick={() => setWizardStep(0)}>← {uiText.back}</button>
+                      <span style={s.wizardTotal}>${getSubtotal(modal, customization.toppings, customization.size).toFixed(2)}</span>
+                    </div>
+                  </div>
+                )}
+                {wizardStep === 2 && (
+                  <div style={s.wizardStep}>
                     <p style={s.wizardQuestion}>{modal.category_name === 'Hot Drinks' ? `${uiText.howHot} ☕` : `${uiText.howCold} 🧊`}</p>
                     <div style={s.wizardOptions} role="group" aria-label={modal.category_name === 'Hot Drinks' ? 'Temperature' : 'Ice level'}>
                       {(modal.category_name === 'Hot Drinks' ? [
                         { value: 'HOT', emoji: '☕', label: 'Hot' }
+                      ] : modal.category_name === 'Ice Blended' ? [
+                        { value: 'NORMAL_ICE', emoji: '❄️', label: 'Regular'   },
+                      ] : (modal.category_name === 'Coffee' || modal.category_name === 'Brewed Tea' || modal.category_name === 'Milk Tea') ? [
+                        { value: 'NO_ICE',     emoji: '🌡️', label: 'No Ice'   },
+                        { value: 'LESS_ICE',   emoji: '🧊', label: 'Less Ice'  },
+                        { value: 'NORMAL_ICE', emoji: '❄️', label: 'Regular'   },
+                        { value: 'HOT',        emoji: '☕', label: 'Hot'       },
                       ] : [
                         { value: 'NO_ICE',     emoji: '🌡️', label: 'No Ice'   },
                         { value: 'LESS_ICE',   emoji: '🧊', label: 'Less Ice'  },
@@ -1506,7 +1808,7 @@ export default function Customer() {
                         <button
                           key={value}
                           style={{ ...s.wizardOptBtn, ...(customization.ice === value ? s.wizardOptBtnActive : {}) }}
-                          onClick={() => { setCustomization(prev => ({ ...prev, ice: value })); setWizardStep(2); }}
+                          onClick={() => { setCustomization(prev => ({ ...prev, ice: value })); setWizardStep(3); }}
                           aria-pressed={customization.ice === value}
                           aria-label={`${modal.category_name === 'Hot Drinks' ? uiText.temperature : uiText.iceLevel}: ${getIceDisplayLabel(value)}`}
                         >
@@ -1515,14 +1817,17 @@ export default function Customer() {
                         </button>
                       ))}
                     </div>
-                    <button style={s.wizardBackBtn} onClick={() => setWizardStep(0)}>← {uiText.back}</button>
+                    <div style={s.wizardFooter}>
+                      <button style={s.wizardBackBtn} onClick={() => setWizardStep(1)}>← {uiText.back}</button>
+                      <span style={s.wizardTotal}>${getSubtotal(modal, customization.toppings, customization.size).toFixed(2)}</span>
+                    </div>
                   </div>
                 )}
-                {wizardStep === 2 && (
+                {wizardStep === 3 && (
                   <div style={s.wizardStep}>
                     <p style={s.wizardQuestion}>{uiText.anyExtras} ✨</p>
                     <div style={s.wizardToppingGrid} role="group" aria-label="Toppings">
-                      {toppings.map(t => (
+                      {displayToppings.map(t => (
                         <button
                           key={t.topping_id}
                           style={{ ...s.wizardToppingBtn, ...(customization.toppings.includes(t.topping_id) ? s.wizardToppingBtnActive : {}) }}
@@ -1532,15 +1837,19 @@ export default function Customer() {
                         >
                           <span style={{ fontSize: '1.5rem' }}>🧆</span>
                           <span>{getToppingDisplayName(t)}</span>
+<<<<<<< HEAD
+                          <span style={{ fontSize: '0.8rem', opacity: 0.9 }}>+${parseFloat(t.topping_price).toFixed(2)}</span>
+=======
                           <span style={{ fontSize: '0.8rem', color: PRICE_TEXT }}>+${parseFloat(t.topping_price).toFixed(2)}</span>
+>>>>>>> mindi-managerImprovements
                         </button>
                       ))}
                     </div>
                     <div style={s.wizardFooter}>
-                      <button style={s.wizardBackBtn} onClick={() => setWizardStep(1)}>← {uiText.back}</button>
+                      <button style={s.wizardBackBtn} onClick={() => setWizardStep(2)}>← {uiText.back}</button>
                       <span style={s.wizardTotal}>${getSubtotal(modal, customization.toppings, customization.size).toFixed(2)}</span>
-                      <button style={s.wizardAddBtn} className="fun-btn" onClick={addToCart} aria-label={`Add ${modal.drink_name} to cart`}>
-                        Add to Cart 🛒
+                      <button style={s.wizardAddBtn} className="fun-btn" onClick={addToCart} aria-label={editingCartItemId ? `Update ${modal.drink_name} in cart` : `Add ${modal.drink_name} to cart`}>
+                        {editingCartItemId ? uiText.updateCart : uiText.addToCart} 🛒
                       </button>
                     </div>
                   </div>
@@ -1548,16 +1857,18 @@ export default function Customer() {
               </>
             ) : (
               <>
-                <button
-                  type="button"
-                  style={s.modalCloseBtn}
-                  onClick={() => setModal(null)}
-                  aria-label="Close customization"
-                >
-                  ✕
-                </button>
+                {editingCartItemId && (
+                  <button
+                    type="button"
+                    style={s.customizeEditBackBtn}
+                    onClick={closeCustomizationModal}
+                    aria-label={uiText.backToOrder}
+                  >
+                    ←
+                  </button>
+                )}
                 <div style={{ fontSize: `${3 * ts}rem`, textAlign: 'center', lineHeight: 1, marginBottom: '0.5rem' }}>{categoryEmojis[modal.category_name] || '🍹'}</div>
-                <h2 id="customize-drink-title" style={{ ...s.modalTitle,    fontSize: `${1.4  * ts}rem` }}>{translatedDrinks[modal.drink_id] || modal.drink_name}</h2>
+                <h2 id="customize-drink-title" style={{ ...s.modalTitle,    fontSize: `${1.4  * ts}rem` }}>{getDrinkDisplayLabel(modal)}</h2>
                 <p                             style={{ ...s.modalCategory, fontSize: `${0.85 * ts}rem` }}>{translatedCategories[modal.category_id] || modal.category_name}</p>
                 <div style={s.section}>
                   <p style={{ ...s.sectionLabel, fontSize: `${0.95 * ts}rem` }}>{uiText.sweetness}</p>
@@ -1575,21 +1886,86 @@ export default function Customer() {
                 <div style={s.section}>
                   <p style={{ ...s.sectionLabel, fontSize: `${0.95 * ts}rem` }}>{uiText.size}</p>
                   <div style={s.optionRow} role="group" aria-label="Size">
-                    {SIZE_LEVELS.map(({ label, value }) => (
-                      <button key={value}
-                        style={{ ...s.optBtn, ...(customization.size === value ? s.optBtnActive : {}), fontSize: `${0.85 * ts}rem` }}
-                        onClick={() => setCustomization(prev => ({ ...prev, size: value }))}
-                        aria-pressed={customization.size === value}
-                        aria-label={`Set size to ${label}`}
-                      >{label}</button>
-                    ))}
+                    {SIZE_LEVELS.map(({ label, value }) => {
+                      const adjustment = getSizePriceAdjustment(modal, value);
+                      const adjustmentStr = adjustment === 0 ? '+$0.00' : (adjustment > 0 ? `+$${adjustment.toFixed(2)}` : `-$${Math.abs(adjustment).toFixed(2)}`);
+                      return (
+                        <button key={value}
+                          style={{ ...s.optBtn, ...(customization.size === value ? s.optBtnActive : {}), fontSize: `${0.85 * ts}rem` }}
+                          onClick={() => setCustomization(prev => ({ ...prev, size: value }))}
+                          aria-pressed={customization.size === value}
+                          aria-label={`Set size to ${label}, ${adjustmentStr}`}
+                        >
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem' }}>
+                            <span>{label}</span>
+                            <span style={{ fontSize: '0.7rem', opacity: 0.9 }}>{adjustmentStr}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-                {modal.category_name !== 'Hot Drinks' && (
+                {modal.category_name === 'Milk Tea' && (
+                  <>
+                    <div style={s.section}>
+                      <p style={{ ...s.sectionLabel, fontSize: `${0.95 * ts}rem` }}>{uiText.serving}</p>
+                      <div style={s.optionRow} role="group" aria-label={uiText.serving}>
+                        <button
+                          type="button"
+                          style={{ ...s.optBtn, ...(customization.ice !== 'HOT' ? s.optBtnActive : {}), fontSize: `${0.85 * ts}rem` }}
+                          onClick={() =>
+                            setCustomization((prev) => ({
+                              ...prev,
+                              ice:
+                                prev.ice === 'HOT'
+                                  ? 'NORMAL_ICE'
+                                  : ['NO_ICE', 'LESS_ICE', 'NORMAL_ICE'].includes(prev.ice)
+                                    ? prev.ice
+                                    : 'NORMAL_ICE',
+                            }))
+                          }
+                          aria-pressed={customization.ice !== 'HOT'}
+                          aria-label={`${uiText.cold} serving`}
+                        >
+                          {uiText.cold}
+                        </button>
+                        <button
+                          type="button"
+                          style={{ ...s.optBtn, ...(customization.ice === 'HOT' ? s.optBtnActive : {}), fontSize: `${0.85 * ts}rem` }}
+                          onClick={() => setCustomization((prev) => ({ ...prev, ice: 'HOT' }))}
+                          aria-pressed={customization.ice === 'HOT'}
+                          aria-label={`${uiText.hot} serving`}
+                        >
+                          {uiText.hot}
+                        </button>
+                      </div>
+                    </div>
+                    {customization.ice !== 'HOT' && (
+                      <div style={s.section}>
+                        <p style={{ ...s.sectionLabel, fontSize: `${0.95 * ts}rem` }}>{uiText.iceLevel}</p>
+                        <div style={s.optionRow} role="group" aria-label="Ice level">
+                          {ICE_LEVELS.map(({ label, value }) => (
+                            <button
+                              key={value}
+                              type="button"
+                              style={{ ...s.optBtn, ...(customization.ice === value ? s.optBtnActive : {}), fontSize: `${0.85 * ts}rem` }}
+                              onClick={() => setCustomization((prev) => ({ ...prev, ice: value }))}
+                              aria-pressed={customization.ice === value}
+                              aria-label={`Set ice level to ${label}`}
+                            >
+                              {getIceDisplayLabel(value)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+                {modal.category_name !== 'Hot Drinks' && modal.category_name !== 'Milk Tea' && (
                   <div style={s.section}>
                     <p style={{ ...s.sectionLabel, fontSize: `${0.95 * ts}rem` }}>{uiText.iceLevel}</p>
                     <div style={s.optionRow} role="group" aria-label="Ice level">
-                      {ICE_LEVELS.map(({ label, value }) => (
+                      {ICE_LEVELS.filter(({ value }) => modal.category_name !== 'Ice Blended' || value === 'NORMAL_ICE').map(({ label, value }) => (
                         <button key={value}
                           style={{ ...s.optBtn, ...(customization.ice === value ? s.optBtnActive : {}), fontSize: `${0.85 * ts}rem` }}
                           onClick={() => setCustomization(prev => ({ ...prev, ice: value }))}
@@ -1597,6 +1973,14 @@ export default function Customer() {
                           aria-label={`Set ice level to ${label}`}
                         >{getIceDisplayLabel(value)}</button>
                       ))}
+                      {(modal.category_name === 'Coffee' || modal.category_name === 'Brewed Tea') && (
+                        <button
+                          style={{ ...s.optBtn, ...(customization.ice === 'HOT' ? s.optBtnActive : {}), fontSize: `${0.85 * ts}rem` }}
+                          onClick={() => setCustomization(prev => ({ ...prev, ice: 'HOT' }))}
+                          aria-pressed={customization.ice === 'HOT'}
+                          aria-label="Hot temperature"
+                        >{uiText.hot}</button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1616,7 +2000,7 @@ export default function Customer() {
                 <div style={s.section}>
                   <p style={{ ...s.sectionLabel, fontSize: `${0.95 * ts}rem` }}>{uiText.toppings}</p>
                   <div style={s.toppingGrid} role="group" aria-label="Toppings">
-                    {toppings.map(t => (
+                    {displayToppings.map(t => (
                       <button key={t.topping_id}
                         style={{ ...s.toppingBtn, ...(customization.toppings.includes(t.topping_id) ? s.toppingBtnActive : {}), fontSize: `${0.85 * ts}rem` }}
                         onClick={() => toggleTopping(t.topping_id)}
@@ -1628,7 +2012,7 @@ export default function Customer() {
                 </div>
                 <div style={s.modalFooter}>
                   <span style={{ ...s.modalTotal, fontSize: `${1.4 * ts}rem` }}>${getSubtotal(modal, customization.toppings, customization.size).toFixed(2)}</span>
-                  <button style={{ ...s.addBtn, fontSize: `${1 * ts}rem` }} onClick={addToCart} aria-label={`Add ${modal.drink_name} to cart`}>Add to Cart</button>
+                  <button style={{ ...s.addBtn, fontSize: `${1 * ts}rem` }} onClick={addToCart} aria-label={editingCartItemId ? `Update ${modal.drink_name} in cart` : `Add ${modal.drink_name} to cart`}>{editingCartItemId ? uiText.updateCart : uiText.addToCart}</button>
                 </div>
               </>
             )}
@@ -1636,23 +2020,22 @@ export default function Customer() {
         </div>
       )}
 
-
+      
       {showCart && (
-        <div style={s.overlay} onClick={() => setShowCart(false)}>
-          <div style={s.cartOverlayContent} onClick={(e) => e.stopPropagation()}>
+        <div style={s.overlay} onClick={() => setShowCart(false)} onTouchEnd={() => setShowCart(false)}>
+          <div style={s.cartOverlayContent} onClick={(e) => e.stopPropagation()} onTouchEnd={(e) => e.stopPropagation()}>
             <div
               style={s.cartDrawer}
               role="dialog"
               aria-modal="true"
               aria-labelledby="cart-title"
             >
-              <div style={s.cartHeader}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <h2 id="cart-title" style={s.cartTitle}>
                   Your Order
                 </h2>
                 <button
-                  type="button"
-                  style={s.cartCloseBtn}
+                  style={s.closeCartBtn}
                   onClick={() => setShowCart(false)}
                   aria-label="Close cart"
                 >
@@ -1664,6 +2047,24 @@ export default function Customer() {
                 <p style={s.emptyCart}>Your cart is empty.</p>
               ) : (
                 <>
+                  {cartHasBlockedAllergen && (
+                    <div
+                      style={{
+                        background: '#fff3cd',
+                        border: '2px solid #c8773a',
+                        borderRadius: '10px',
+                        padding: '0.75rem',
+                        marginBottom: '1rem',
+                        color: '#4a2c0a',
+                        fontWeight: '700',
+                        lineHeight: 1.35,
+                      }}
+                    >
+                      ⚠️ Allergy warning: Your current filter is set to{' '}
+                      {activeAllergyRule.label}, but one or more items already in your cart
+                      contain blocked ingredients. Please remove them before ordering if needed.
+                    </div>
+                  )}
                   {cart.map((item) => (
                     <div key={item.id} style={s.cartItem}>
                       <div style={s.cartItemInfo}>
@@ -1695,6 +2096,14 @@ export default function Customer() {
                             </>
                           )}
                         </div>
+                        <button
+                          type="button"
+                          style={s.cartEditBtn}
+                          onClick={() => beginEditCartItem(item)}
+                          aria-label={`Edit customization for ${item.drink.drink_name}`}
+                        >
+                          {uiText.editCartItem}
+                        </button>
                       </div>
 
                       <div style={s.cartItemRight}>
@@ -1746,8 +2155,19 @@ export default function Customer() {
                     <span>Total {(discountedCartTotal < cartTotal) && <span style={s.cartSavings}>(${(cartTotal - discountedCartTotal).toFixed(2)} saved)</span>}</span>
                     <span style={s.cartTotalAmt}>${discountedCartTotal.toFixed(2)}</span>
                   </div>
-                  <button style={s.placeOrderBtn} className={funMode ? 'fun-btn' : ''} onClick={placeOrder} aria-label="Place order" disabled={placingOrder}>
-                    {placingOrder ? 'Placing Order...' : 'Place Order'}
+                  <button
+                    type="button"
+                    style={s.placeOrderBtn}
+                    className={funMode ? 'fun-btn' : ''}
+                    onClick={() => {
+                      setCheckoutError('');
+                      setShowCart(false);
+                      setShowCheckout(true);
+                    }}
+                    aria-label={uiText.proceedCheckout}
+                    disabled={placingOrder}
+                  >
+                    {uiText.proceedCheckout}
                   </button>
                 </>
               )}
@@ -1805,7 +2225,187 @@ export default function Customer() {
         </div>
       )}
 
+      {showCheckout && (
+        <div
+          style={s.checkoutOverlay}
+          onClick={() => {
+            setShowCheckout(false);
+            setShowCart(true);
+          }}
+          onTouchEnd={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowCheckout(false);
+              setShowCart(true);
+            }
+          }}
+          role="presentation"
+        >
+          <div
+            style={s.checkoutCard}
+            onClick={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="checkout-title"
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1rem' }}>
+              <h2 id="checkout-title" style={s.cartTitle}>
+                {uiText.checkoutTitle}
+              </h2>
+              <button
+                type="button"
+                style={s.closeCartBtn}
+                onClick={() => {
+                  setShowCheckout(false);
+                  setShowCart(true);
+                }}
+                aria-label={uiText.backToOrder}
+              >
+                ✕
+              </button>
+            </div>
 
+            <h3 style={{ ...s.sectionLabel, marginTop: 0 }}>{uiText.orderReview}</h3>
+            <div style={{ marginBottom: '1.25rem', maxHeight: '36vh', overflowY: 'auto', paddingRight: '0.25rem' }}>
+              {cart.map((item) => (
+                <div key={item.id} style={{ ...s.cartItem, padding: '0.6rem 0' }}>
+                  <div style={s.cartItemInfo}>
+                    <div style={s.cartItemName}>{item.drink.drink_name}</div>
+                    <div style={s.cartItemMeta}>
+                      Size {item.size} · {getSugarLabel(item.sweetness_level)} sweet · {getIceLabel(item.ice_level)}
+                      {item.toppings.length > 0 && (
+                        <>
+                          {' '}
+                          ·{' '}
+                          {item.toppings
+                            .map((tid) => toppings.find((t) => t.topping_id === tid)?.topping_name)
+                            .filter(Boolean)
+                            .join(', ')}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div style={s.cartItemRight}>
+                    <span style={s.cartItemPrice}>
+                      $
+                      {(getDiscountedUnitPrice(item) * item.qty).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={s.cartTotalRow}>
+              <span>{uiText.total}</span>
+              <span style={s.cartTotalAmt}>${discountedCartTotal.toFixed(2)}</span>
+            </div>
+
+            <h3 style={{ ...s.sectionLabel, marginTop: '1.25rem' }}>{uiText.paymentDetails}</h3>
+
+            {checkoutError ? (
+              <div
+                style={{
+                  background: '#fde8e8',
+                  border: '2px solid #c84a4a',
+                  borderRadius: '10px',
+                  padding: '0.65rem 0.85rem',
+                  marginBottom: '1rem',
+                  color: '#5c1a1a',
+                  fontWeight: '600',
+                  fontSize: '0.9rem',
+                }}
+                role="alert"
+              >
+                {checkoutError}
+              </div>
+            ) : null}
+
+            <div style={s.checkoutField}>
+              <label htmlFor="checkout-name" style={s.checkoutLabel}>{uiText.cardholderName}</label>
+              <input
+                id="checkout-name"
+                type="text"
+                autoComplete="cc-name"
+                value={paymentName}
+                onChange={(e) => setPaymentName(e.target.value)}
+                style={s.checkoutInput}
+              />
+            </div>
+            <div style={s.checkoutField}>
+              <label htmlFor="checkout-card" style={s.checkoutLabel}>{uiText.cardNumber}</label>
+              <input
+                id="checkout-card"
+                type="text"
+                inputMode="numeric"
+                autoComplete="cc-number"
+                placeholder="4242 4242 4242 4242"
+                value={paymentCard}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/\D/g, '').slice(0, 19);
+                  const spaced = raw.replace(/(.{4})/g, '$1 ').trim();
+                  setPaymentCard(spaced);
+                }}
+                style={s.checkoutInput}
+              />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div style={s.checkoutField}>
+                <label htmlFor="checkout-exp" style={s.checkoutLabel}>{uiText.cardExpiry}</label>
+                <input
+                  id="checkout-exp"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="cc-exp"
+                  placeholder="MM/YY"
+                  value={paymentExpiry}
+                  onChange={(e) => {
+                    const d = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    const fmt = d.length <= 2 ? d : `${d.slice(0, 2)}/${d.slice(2)}`;
+                    setPaymentExpiry(fmt);
+                  }}
+                  style={s.checkoutInput}
+                />
+              </div>
+              <div style={s.checkoutField}>
+                <label htmlFor="checkout-cvv" style={s.checkoutLabel}>{uiText.cardCvv}</label>
+                <input
+                  id="checkout-cvv"
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="cc-csc"
+                  value={paymentCvv}
+                  onChange={(e) => setPaymentCvv(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                  style={s.checkoutInput}
+                />
+              </div>
+            </div>
+
+            <button
+              type="button"
+              style={s.placeOrderBtn}
+              className={funMode ? 'fun-btn' : ''}
+              onClick={submitCheckoutOrder}
+              aria-label={uiText.payAndPlaceOrder}
+              disabled={placingOrder || cart.length === 0}
+            >
+              {placingOrder ? uiText.placingOrder : uiText.payAndPlaceOrder}
+            </button>
+
+            <button
+              type="button"
+              style={s.checkoutBackBtn}
+              onClick={() => {
+                setShowCheckout(false);
+                setShowCart(true);
+              }}
+            >
+              ← {uiText.backToOrder}
+            </button>
+          </div>
+        </div>
+      )}
+
+      
       {showWheel && (
         <div style={s.overlay} onClick={() => setShowWheel(false)}>
           <div
@@ -1899,7 +2499,7 @@ export default function Customer() {
         </div>
       )}
 
-
+      
       {orderPlaced && (
         <div style={s.toast} role="status" aria-live="polite">
           ✅ Order placed! Thank you!
@@ -1916,7 +2516,7 @@ export default function Customer() {
         </div>
       )}
 
-
+      
       {showAchievements && (
         <div style={s.overlay} onClick={() => setShowAchievements(false)}>
           <div
@@ -1952,7 +2552,7 @@ export default function Customer() {
         </div>
       )}
 
-
+      
       {showAllergyGuide && (
         <div style={s.overlay} onClick={() => setShowAllergyGuide(false)}>
           <div
@@ -1963,7 +2563,7 @@ export default function Customer() {
             aria-labelledby="allergy-guide-title"
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h2 id="allergy-guide-title" style={s.modalTitle}>Allergies & Sensitivities</h2>
+              <h2 id="allergy-guide-title" style={s.modalTitle}>{uiText.allergiesTitle}</h2>
               <button
                 style={s.assistantClose}
                 onClick={() => setShowAllergyGuide(false)}
@@ -1973,7 +2573,7 @@ export default function Customer() {
               </button>
             </div>
             <div style={s.guideSection}>
-              <h3 style={s.guideSectionTitle}>Common Ingredients</h3>
+              <h3 style={s.guideSectionTitle}>{uiText.commonIngredients}</h3>
               <ul style={s.guideList}>
                 <li>
                   <strong>Tea bases</strong> — black, green, jasmine, or oolong tea, brewed and paired with ice, milk,
@@ -1996,20 +2596,17 @@ export default function Customer() {
             </div>
             <div style={s.guideSection}>
               <p style={s.guideDisclaimer}>
-                ⚠️ <strong>Important:</strong> Recipes and suppliers can change. Shared blenders, shakers, and prep areas
-                mean traces of dairy, nuts, gluten, soy, sesame, and other allergens can still be present even when a
-                name sounds safe.
+                ⚠️ <strong>Important:</strong> {uiText.allergiesImportant}
               </p>
               <p style={s.guideDisclaimer}>
-                <strong>Tell a team member before you order</strong> if you have allergies or intolerances. Use the menu
-                categories to explore, confirm with staff, and skip toppings you cannot have in the customization step.
+                <strong>Tell a team member before you order</strong> {uiText.allergyWarning}
               </p>
             </div>
           </div>
         </div>
       )}
 
-
+      
       {showAssistant && (
         <div
           style={s.assistantOverlay}
@@ -2093,9 +2690,20 @@ export default function Customer() {
                 type="text"
                 value={assistantInput}
                 onChange={(event) => setAssistantInput(event.target.value)}
+                placeholder={
+                  language === 'es'
+                    ? 'Pregunta sobre el menú...'
+                    : language === 'fr'
+                    ? 'Demandez sur le menu...'
+                    : language === 'hi'
+                    ? 'मेनू के बारे में पूछें...'
+                    : language === 'zh'
+                    ? '询问菜单...'
+                    : 'Ask something about the menu or ordering...'
+                }
                 onFocus={showTouchKeyboard}
                 onClick={showTouchKeyboard}
-                placeholder={assistantPlaceholder}
+                placeholder="Ask something about the menu or ordering..."
                 inputMode="text"
                 enterKeyHint="send"
               />
@@ -2131,7 +2739,9 @@ const PRICE_TEXT = '#3d2914';
 
 // Styles
 const s = {
+  // Styles the page root container.
   root:             { position: 'relative', minHeight: '100vh', background: CREAM, fontFamily: "'Georgia', serif", color: BROWN },
+  // Styles the keyboard skip link.
   skipLink: {
     position: 'absolute',
     left: '-9999px',
@@ -2146,98 +2756,149 @@ const s = {
     textDecoration: 'none',
     fontSize: '0.95rem',
   },
+  // Styles the sticky navigation wrapper.
   navShell: {
     position: 'sticky',
     top: 0,
     zIndex: 100,
     boxShadow: '0 6px 20px rgba(74, 44, 10, 0.12)',
   },
+  // Styles the top header bar.
   header: {
     background: BROWN,
     color: '#fff',
     borderBottom: '1px solid rgba(255,255,255,0.12)',
   },
-  headerInner: {
-    maxWidth: '1200px',
-    margin: '0 auto',
-    padding: '1rem 1.25rem',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '1rem',
-    flexWrap: 'wrap',
-    boxSizing: 'border-box',
-  },
-  headerLeft:       { display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap', minWidth: 0 },
-  headerActions:    { display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' },
-  logo:             { fontSize: 'clamp(1.2rem, 2.8vw, 1.55rem)', fontWeight: 'bold', letterSpacing: '0.04em', margin: 0, lineHeight: 1.2 },
-  assistantToggle:  { width: '2.2rem', height: '2.2rem', borderRadius: '50%', border: 'none', background: '#fff', color: BROWN, fontSize: '1.05rem', fontWeight: 900, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, boxShadow: '0 2px 6px rgba(0,0,0,0.12)' },
-  translateWidget: {
-    background: '#fff',
-    borderRadius: '8px',
-    padding: '0.15rem 0.35rem',
-    fontSize: '0.85rem',
-  },
-  weatherChip:      { display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: 'rgba(255,255,255,0.15)', borderRadius: '50px', padding: '0.25rem 0.75rem 0.25rem 0.25rem', color: '#fff', backdropFilter: 'blur(4px)' },
+  // Styles the inner header layout.
+  headerInner:      { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap', boxSizing: 'border-box', width: '100%', padding: '0.35rem 0.85rem' },
+  // Styles the left-side header area.
+  headerLeft:       { display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', minWidth: 0 },
+  // Styles the page title.
+  logo:             { fontSize: '1.05rem', fontWeight: 'bold', letterSpacing: '0.03em', margin: 0, lineHeight: 1.1 },
+  // Styles the right-side header buttons.
+  headerActions:    { display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap', justifyContent: 'flex-end', paddingRight: '0.4rem' },
+  // Styles the weather display chip.
+  weatherChip:      { display: 'inline-flex', alignItems: 'center', gap: '0.2rem', background: 'rgba(255,255,255,0.15)', borderRadius: '50px', padding: '0.18rem 0.6rem 0.18rem 0.2rem', color: '#fff', backdropFilter: 'blur(4px)' },
+  // Hides text visually for screen readers.
   visuallyHidden:   { position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 },
+  // Styles loading/status messages.
   statusMessage:    { margin: '0.75rem auto 0', padding: '0 1.25rem', maxWidth: '1200px', color: BROWN, fontSize: '0.95rem' },
+  // Styles error messages.
   errorMessage:     { margin: '0.75rem auto 0', padding: '0 1.25rem', maxWidth: '1200px', color: '#b00020', fontSize: '0.95rem', fontWeight: 'bold' },
+<<<<<<< HEAD
+  // Styles the cart button.
+  cartBtn:          { background: ACCENT, color: '#fff', border: 'none', borderRadius: '50px', padding: '0.45rem 0.95rem', fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 'bold', fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  // Positions the feature menu wrapper.
+=======
   cartBtn:          { background: ACCENT_FILL, color: '#fff', border: 'none', borderRadius: '50px', padding: '0.55rem 1.15rem', fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 'bold', fontFamily: 'inherit', whiteSpace: 'nowrap' },
+>>>>>>> mindi-managerImprovements
   featureMenuWrap:  { position: 'relative' },
-  featureMenuBtn:   { background: '#fff', color: BROWN, border: 'none', borderRadius: '50px', padding: '0.5rem 0.95rem', fontSize: '0.88rem', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  // Styles the feature menu button.
+  featureMenuBtn:   { background: '#fff', color: BROWN, border: 'none', borderRadius: '50px', padding: '0.42rem 0.85rem', fontSize: '0.82rem', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontFamily: 'inherit', whiteSpace: 'nowrap' },
+  // Styles the feature dropdown panel.
   featureDropdown:  { position: 'absolute', top: 'calc(100% + 0.45rem)', right: 0, minWidth: '220px', background: '#fff', border: '1px solid #e8d5b7', borderRadius: '12px', boxShadow: '0 8px 20px rgba(0,0,0,0.18)', padding: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', zIndex: 150 },
+  // Styles each feature menu item.
   featureMenuItem:  { border: 'none', background: '#fff8f0', color: BROWN, borderRadius: '9px', padding: '0.6rem 0.7rem', fontSize: '0.9rem', fontWeight: 'bold', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' },
+<<<<<<< HEAD
+  // Styles the cart item count badge.
+  cartBadge:        { background: '#fff', color: ACCENT, borderRadius: '50%', padding: '0 6px', fontSize: '0.8rem', fontWeight: 'bold' },
+  // Styles the category bar section.
+=======
   cartBadge:        { background: '#fff', color: BROWN, borderRadius: '50%', padding: '0 6px', fontSize: '0.8rem', fontWeight: 'bold' },
+>>>>>>> mindi-managerImprovements
   categoryBarWrap: {
     background: LIGHT,
     borderBottom: '1px solid #e8d5b7',
-    padding: '0.5rem 0 0.65rem',
+    padding: '0.55rem 1rem 0.8rem',
   },
-  categoryBarLabel: {
-    margin: '0 auto 0.4rem',
-    padding: '0 1rem',
+  // Styles the full-width all-categories row.
+  categoryBarAll: {
     maxWidth: '1200px',
+    margin: '0 auto 0.45rem',
     boxSizing: 'border-box',
+<<<<<<< HEAD
+=======
     fontSize: '0.72rem',
     fontWeight: 'bold',
     textTransform: 'uppercase',
     letterSpacing: '0.14em',
     color: '#3d2914',
+>>>>>>> mindi-managerImprovements
   },
-  categoryBar: {
-    display: 'flex',
-    flexWrap: 'nowrap',
-    gap: '0.45rem',
-    padding: '0 1rem 0.15rem',
+  // Styles the compact controls under the category grid.
+  categoryControls: {
     maxWidth: '1200px',
-    margin: '0 auto',
-    overflowX: 'auto',
-    WebkitOverflowScrolling: 'touch',
-    scrollbarWidth: 'thin',
-    scrollSnapType: 'x proximity',
+    margin: '0.55rem auto 0',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '0.75rem',
+    flexWrap: 'wrap',
     boxSizing: 'border-box',
   },
-  catBtn: {
-    border: '2px solid #e8d5b7',
-    background: '#fff',
+  // Styles a control cluster in the category row.
+  controlClusterSide: { display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' },
+  // Styles the all-categories button.
+  catBtnAll: {
+    border: '1px solid #d9c4a7',
+    background: '#fcf7ef',
     color: BROWN,
-    borderRadius: '999px',
-    padding: '0.5rem 0.9rem',
-    fontSize: '0.78rem',
+    borderRadius: '0',
+    padding: '0.45rem 0.75rem',
+    fontSize: '0.68rem',
     cursor: 'pointer',
     whiteSpace: 'nowrap',
+    lineHeight: 1,
+    textAlign: 'center',
+    fontFamily: 'inherit',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    fontWeight: 'bold',
+    width: '100%',
+    minHeight: '2rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 1px 2px rgba(74,44,10,0.05)',
+  },
+  // Styles the category button grid.
+  categoryBar: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+    gap: '0.7rem',
+    padding: 0,
+    maxWidth: '1200px',
+    margin: '0 auto',
+    boxSizing: 'border-box',
+    width: '100%',
+  },
+  // Styles each category button.
+  catBtn: {
+    border: '1px solid #d9c4a7',
+    background: '#fcf7ef',
+    color: BROWN,
+    borderRadius: '0',
+    padding: '0.6rem 0.6rem',
+    fontSize: '0.68rem',
+    cursor: 'pointer',
+    whiteSpace: 'normal',
     lineHeight: 1.2,
     textAlign: 'center',
     fontFamily: 'inherit',
-    flex: '0 0 auto',
-    scrollSnapAlign: 'start',
-    minHeight: '2.35rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    fontWeight: 'bold',
+    width: '100%',
+    minHeight: '2.6rem',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '0.25rem',
+    boxShadow: '0 1px 2px rgba(74,44,10,0.05)',
   },
-  catBtnActive:     { background: BROWN, color: '#fff', border: `2px solid ${BROWN}` },
+  // Styles the active category button.
+  catBtnActive:     { background: BROWN, color: '#fff', border: `1px solid ${BROWN}`, boxShadow: '0 2px 5px rgba(74,44,10,0.12)' },
+  // Styles the drink card grid.
   grid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
@@ -2248,11 +2909,22 @@ const s = {
     boxSizing: 'border-box',
     scrollMarginTop: '12px',
   },
-  drinkCard:        { background: '#fff', border: '2px solid #e8d5b7', borderRadius: '16px', padding: '1.5rem 1rem', cursor: 'pointer', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(74,44,10,0.08)' },
+  // Styles each drink grid card.
+  drinkCard:        { flex: 1, width: '100%', background: '#fff', border: '2px solid #e8d5b7', borderRadius: '16px', padding: '1.5rem 1rem', cursor: 'pointer', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(74,44,10,0.08)' },
+  // Styles the drink emoji.
   drinkEmoji:       { fontSize: '2.5rem' },
+  // Styles drink names.
   drinkName:        { fontSize: '0.95rem', fontWeight: 'bold', color: BROWN, lineHeight: 1.3 },
+<<<<<<< HEAD
+  // Styles drink category text.
+  drinkCategory:    { fontSize: '0.75rem', color: '#333', textTransform: 'uppercase', letterSpacing: '0.08em' },
+  // Styles drink price text.
+  drinkPrice:       { fontSize: '1.1rem', color: ACCENT, fontWeight: 'bold', marginTop: '0.25rem' },
+  // Styles the price and speaker row.
+=======
   drinkCategory:    { fontSize: '0.75rem', color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: '0.08em' },
   drinkPrice:       { fontSize: '1.1rem', color: PRICE_TEXT, fontWeight: 'bold', marginTop: '0.25rem' },
+>>>>>>> mindi-managerImprovements
   drinkPriceRow: {
     display: 'flex',
     alignItems: 'center',
@@ -2260,6 +2932,7 @@ const s = {
     gap: '0.4rem',
     marginTop: '0.25rem',
   },
+  // Styles the read-aloud button.
   speakBtn: {
     background: 'transparent',
     border: '1.5px solid #e8d5b7',
@@ -2274,58 +2947,77 @@ const s = {
     padding: 0,
     lineHeight: 1,
   },
-  weatherRecommendation: { marginTop: '0.4rem', background: '#e8f4ff', color: '#2b4a60', borderRadius: '999px', padding: '0.25rem 0.55rem', fontSize: '0.72rem', fontWeight: 'bold'},
+  // Styles weather recommendation labels.
+  weatherRecommendation: { marginTop: '0.4rem', background: '#e8f4ff', color: '#001a2e', borderRadius: '999px', padding: '0.25rem 0.55rem', fontSize: '0.72rem', fontWeight: 'bold'},
+  // Styles modal overlay backgrounds.
   overlay:          { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200 },
-  modalBox: {
-    position: 'relative',
-    background: '#fff',
-    borderRadius: '20px',
-    padding: '2rem',
-    width: '90%',
-    maxWidth: '480px',
-    maxHeight: '90vh',
-    overflowY: 'auto',
-  },
-  /** Regular-mode customize modal: top-right dismiss (fun mode uses wizard close on the left). */
-  modalCloseBtn: {
-    position: 'absolute',
-    top: '0.85rem',
-    right: '0.85rem',
-    zIndex: 2,
-    border: 'none',
-    background: '#f3e6d8',
-    color: BROWN,
-    borderRadius: '50%',
-    width: '2.25rem',
-    height: '2.25rem',
-    fontSize: '1.05rem',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    lineHeight: 1,
-    fontFamily: 'inherit',
-    boxShadow: '0 1px 4px rgba(74,44,10,0.12)',
-  },
+  checkoutOverlay:  { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 210, padding: '0.75rem', boxSizing: 'border-box' },
+  checkoutCard:     { background: '#fff', borderRadius: '20px', padding: '2rem', width: '100%', maxWidth: '520px', maxHeight: '94vh', overflowY: 'auto', boxShadow: '0 12px 40px rgba(0,0,0,0.2)' },
+  checkoutField:    { marginBottom: '1rem' },
+  checkoutLabel:    { display: 'block', fontWeight: 'bold', color: BROWN, marginBottom: '0.35rem', fontSize: '0.9rem' },
+  checkoutInput:    { width: '100%', padding: '0.65rem 0.85rem', borderRadius: '12px', border: '2px solid #e8d5b7', fontSize: '1rem', fontFamily: 'inherit', boxSizing: 'border-box' },
+  checkoutBackBtn:  { width: '100%', marginTop: '0.75rem', background: 'transparent', border: 'none', color: BROWN, cursor: 'pointer', fontFamily: 'inherit', fontWeight: '700', fontSize: '0.95rem', padding: '0.5rem', textDecoration: 'underline' },
+  // Styles the standard customization modal.
+  modalBox:         { background: '#fff', borderRadius: '20px', padding: '2rem', width: '90%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' },
+  // Styles modal title text.
   modalTitle:       { fontSize: '1.4rem', fontWeight: 'bold', color: BROWN, textAlign: 'center', margin: '0.5rem 0 0.25rem' },
+<<<<<<< HEAD
+  // Styles modal category text.
+  modalCategory:    { fontSize: '0.85rem', color: '#333', textAlign: 'center', marginBottom: '1.5rem', textTransform: 'uppercase', letterSpacing: '0.08em' },
+  // Styles modal form sections.
+=======
   modalCategory:    { fontSize: '0.85rem', color: TEXT_MUTED, textAlign: 'center', marginBottom: '1.5rem', textTransform: 'uppercase', letterSpacing: '0.08em' },
+>>>>>>> mindi-managerImprovements
   section:          { marginBottom: '1.25rem' },
+  // Styles section labels.
   sectionLabel:     { fontWeight: 'bold', color: BROWN, marginBottom: '0.5rem', fontSize: '0.95rem' },
+<<<<<<< HEAD
+  // Styles the topping note element.
+  toppingNote:      { color: '#333', fontWeight: 'normal', fontSize: '0.8rem' },
+  // Styles option button rows.
+=======
   toppingNote:      { color: TEXT_SECONDARY, fontWeight: 'normal', fontSize: '0.8rem' },
+>>>>>>> mindi-managerImprovements
   optionRow:        { display: 'flex', flexWrap: 'wrap', gap: '0.5rem' },
+  // Styles modal option buttons.
   optBtn:           { border: '2px solid #e8d5b7', background: '#fff', color: BROWN, borderRadius: '50px', padding: '0.4rem 0.9rem', fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'inherit' },
+  // Styles selected option buttons.
   optBtnActive:     { background: BROWN, color: '#fff', border: `2px solid ${BROWN}` },
+  // Styles the topping button grid.
   toppingGrid:      { display: 'flex', flexWrap: 'wrap', gap: '0.5rem' },
+  // Styles each topping button.
   toppingBtn:       { border: '2px solid #e8d5b7', background: '#fff', color: BROWN, borderRadius: '50px', padding: '0.4rem 0.9rem', fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'inherit' },
+<<<<<<< HEAD
+  // Styles selected topping buttons.
+  toppingBtnActive: { background: ACCENT, color: '#fff', border: `2px solid ${ACCENT}` },
+  // Styles the modal footer row.
+  modalFooter:      { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #e8d5b7' },
+  // Styles modal total price.
+  modalTotal:       { fontSize: '1.4rem', fontWeight: 'bold', color: ACCENT },
+  // Styles add-to-cart buttons.
+=======
   toppingBtnActive: { background: ACCENT_FILL, color: '#fff', border: `2px solid ${ACCENT_FILL}` },
   modalFooter:      { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #e8d5b7' },
   modalTotal:       { fontSize: '1.4rem', fontWeight: 'bold', color: PRICE_TEXT },
+>>>>>>> mindi-managerImprovements
   addBtn:           { background: BROWN, color: '#fff', border: 'none', borderRadius: '50px', padding: '0.7rem 1.8rem', fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'bold' },
+  // Styles cart overlay layout.
   cartOverlayContent: { display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: '1rem', width: '100%', padding: '1rem', boxSizing: 'border-box', flexWrap: 'wrap' },
+  // Styles the cart drawer panel.
   cartDrawer:       { background: '#fff', borderRadius: '20px', padding: '2rem', width: '90%', maxWidth: '420px', maxHeight: '90vh', overflowY: 'auto' },
+  // Styles coupon drawer panel.
   couponDrawer:     { background: '#fff', borderRadius: '20px', padding: '1.3rem', width: '90%', maxWidth: '260px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 6px 20px rgba(0,0,0,0.12)', display: 'flex', flexDirection: 'column', gap: '0.6rem' },
+  // Styles coupon title.
   couponTitle:      { fontSize: '1.2rem', fontWeight: 'bold', color: BROWN, margin: 0 },
+<<<<<<< HEAD
+  // Styles empty coupon text.
+  couponEmpty:      { margin: 0, color: '#2d231a', fontSize: '0.9rem', lineHeight: 1.35 },
+  // Styles cart title text.
+  cartTitle:        { fontSize: '1.4rem', fontWeight: 'bold', color: BROWN, marginBottom: '1.5rem' },
+  // Styles empty-cart text.
+  emptyCart:        { color: '#333', textAlign: 'center', padding: '2rem 0' },
+  // Styles each cart item row.
+=======
   couponEmpty:      { margin: 0, color: '#3d2914', fontSize: '0.9rem', lineHeight: 1.35 },
   cartHeader: {
     display: 'flex',
@@ -2355,56 +3047,151 @@ const s = {
     boxShadow: '0 1px 4px rgba(74,44,10,0.12)',
   },
   emptyCart:        { color: TEXT_MUTED, textAlign: 'center', padding: '2rem 0' },
+>>>>>>> mindi-managerImprovements
   cartItem:         { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0.75rem 0', borderBottom: '1px solid #f0e0cc' },
+  // Styles cart item details.
   cartItemInfo:     { flex: 1 },
+  // Styles cart item name.
   cartItemName:     { fontWeight: 'bold', color: BROWN, fontSize: '0.95rem' },
+<<<<<<< HEAD
+  // Styles cart item metadata.
+  cartItemMeta:     { fontSize: '0.78rem', color: '#333', marginTop: '0.25rem' },
+  cartEditBtn:      { marginTop: '0.45rem', padding: '0.25rem 0', background: 'none', border: 'none', color: ACCENT, cursor: 'pointer', fontFamily: 'inherit', fontWeight: '700', fontSize: '0.82rem', textDecoration: 'underline', textUnderlineOffset: '2px' },
+  // Styles cart item controls.
+=======
   cartItemMeta:     { fontSize: '0.78rem', color: TEXT_MUTED, marginTop: '0.25rem' },
+>>>>>>> mindi-managerImprovements
   cartItemRight:    { display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: '1rem' },
+  // Stacks old and new prices.
   cartPriceStack:   { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.2 },
+<<<<<<< HEAD
+  // Styles crossed-out old price.
+  cartItemOldPrice: { color: '#3d332a', textDecoration: 'line-through', fontSize: '0.82rem' },
+  // Styles cart item price.
+  cartItemPrice:    { fontWeight: 'bold', color: ACCENT },
+  // Styles remove item button (subtle).
+  removeBtn:        { background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '0.9rem' },
+  // Styles close cart button (prominent).
+  closeCartBtn:     { background: '#f0e6d8', border: '1px solid #d5c2a8', borderRadius: '6px', color: BROWN, cursor: 'pointer', fontSize: '0.95rem', padding: '0.35rem 0.45rem', fontWeight: '600' },
+  // Styles quantity buttons.
+=======
   cartItemOldPrice: { color: '#5c534a', textDecoration: 'line-through', fontSize: '0.82rem' },
   cartItemPrice:    { fontWeight: 'bold', color: PRICE_TEXT },
   removeBtn:        { background: 'none', border: 'none', color: '#5c3d2e', cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'underline' },
+>>>>>>> mindi-managerImprovements
   quantityBtn:      { background: '#f5f5f5', border: '1px solid #ddd', borderRadius: '4px', color: BROWN, cursor: 'pointer', fontSize: '0.9rem', width: '2rem', height: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  // Styles cart total row.
   cartTotalRow:     { display: 'flex', justifyContent: 'space-between', padding: '1rem 0', fontWeight: 'bold', fontSize: '1.1rem', color: BROWN },
+  // Styles cart savings note.
   cartSavings:      { fontSize: '0.78rem', color: '#2d6a4f' },
+<<<<<<< HEAD
+  // Styles cart total amount.
+  cartTotalAmt:     { color: ACCENT, fontSize: '1.2rem' },
+  // Styles claimed coupon label.
+=======
   cartTotalAmt:     { color: PRICE_TEXT, fontSize: '1.2rem' },
+>>>>>>> mindi-managerImprovements
   cartCouponLabel:  { fontSize: '0.88rem', fontWeight: 'bold', color: BROWN },
+  // Styles coupon action group.
   cartCouponActions: { display: 'flex', gap: '0.35rem' },
+  // Styles coupon action buttons.
   cartCouponActionBtn: { flex: 1, border: '1px solid #d5c2a8', borderRadius: '8px', background: '#fff', color: BROWN, padding: '0.35rem 0.45rem', fontSize: '0.76rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'bold' },
+  // Styles active coupon action button.
   cartCouponActionBtnActive: { background: BROWN, color: '#fff', borderColor: BROWN },
+  // Styles coupon item selector.
   cartCouponSelect: { width: '100%', border: '1px solid #d5c2a8', borderRadius: '8px', background: '#fff', color: BROWN, padding: '0.35rem 0.45rem', fontSize: '0.8rem', fontFamily: 'inherit' },
-  cartCouponQueued: { fontSize: '0.76rem', color: '#6b4b2c', fontWeight: 'bold' },
+  // Styles queued coupon notice.
+  cartCouponQueued: { fontSize: '0.76rem', color: '#1a0f0a', fontWeight: 'bold' },
+  // Styles place-order button.
   placeOrderBtn:    { width: '100%', background: BROWN, color: '#fff', border: 'none', borderRadius: '50px', padding: '1rem', fontSize: '1.1rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'bold', marginTop: '0.5rem' },
+  // Styles order success toast.
   toast:            { position: 'fixed', bottom: '2rem', left: '50%', transform: 'translateX(-50%)', background: '#2d6a4f', color: '#fff', padding: '1rem 2rem', borderRadius: '50px', fontSize: '1rem', fontWeight: 'bold', zIndex: 300, boxShadow: '0 4px 20px rgba(0,0,0,0.2)' },
+  // Styles assistant overlay area.
   assistantOverlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', justifyContent: 'flex-end', alignItems: 'stretch', zIndex: 400, padding: '0.75rem 0.75rem' },
+  // Styles assistant chat popup.
   assistantPopup:   { width: 'min(420px, 100%)', height: 'calc(100dvh - 1.5rem)', maxHeight: 'calc(100dvh - 1.5rem)', background: '#fff', borderRadius: '22px', border: '1px solid #e8d5b7', boxShadow: '0 18px 40px rgba(0,0,0,0.22)', padding: '1rem', boxSizing: 'border-box', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '0.85rem' },
+  // Styles assistant header.
   assistantHeader:  { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' },
+  // Styles the assistant badge element.
   assistantBadge:   { display: 'inline-block', padding: '0.25rem 0.65rem', borderRadius: '999px', background: '#fdf6ec', border: '1px solid #e8d5b7', fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '0.35rem' },
+  // Styles assistant title.
   assistantTitle:   { margin: 0, fontSize: '1.35rem', color: BROWN },
+  // Styles assistant close button.
   assistantClose:   { border: 'none', background: '#f3e6d8', color: BROWN, borderRadius: '50%', width: '2rem', height: '2rem', cursor: 'pointer', fontWeight: 'bold' },
-  assistantDescription: { margin: 0, color: '#6b4b2c', fontSize: '0.95rem' },
+  // Styles the assistant description element.
+  assistantDescription: { margin: 0, color: '#1a0f0a', fontSize: '0.95rem' },
+  // Styles the assistant quick row element.
   assistantQuickRow: { display: 'flex', flexWrap: 'wrap', gap: '0.5rem' },
+  // Styles the assistant quick button element.
   assistantQuickButton: { border: '1px solid #e8d5b7', background: '#fdf6ec', color: BROWN, borderRadius: '999px', padding: '0.45rem 0.7rem', cursor: 'pointer', fontFamily: 'inherit' },
+  // Styles the assistant chat window element.
   assistantChatWindow: { flex: 1, minHeight: 0, overflowY: 'auto', border: '1px solid #f0e0cc', borderRadius: '18px', padding: '0.85rem', background: '#fffdf9', display: 'flex', flexDirection: 'column', gap: '0.75rem' },
+  // Styles the assistant message element.
   assistantMessage: { maxWidth: '80%', padding: '0.8rem 0.95rem', borderRadius: '16px', lineHeight: 1.45, whiteSpace: 'pre-wrap' },
+<<<<<<< HEAD
+  // Styles the assistant message bot element.
+  assistantMessageBot: { background: '#f3e6d8', alignSelf: 'flex-start' },
+  // Styles the assistant message user element.
+=======
   assistantMessageBot: { background: '#f3e6d8', color: BROWN, alignSelf: 'flex-start' },
+>>>>>>> mindi-managerImprovements
   assistantMessageUser: { background: BROWN, color: '#fff', alignSelf: 'flex-end' },
+  // Styles assistant error text.
   assistantError:   { color: '#b00020', fontWeight: 'bold', margin: 0 },
+  // Styles the assistant form element.
   assistantForm:    { display: 'flex', gap: '0.65rem' },
+  // Styles assistant text input.
   assistantInput:   { flex: 1, borderRadius: '999px', border: '1px solid #d8c1a5', padding: '0.85rem 0.95rem', fontSize: '1rem', fontFamily: 'inherit' },
+<<<<<<< HEAD
+  // Styles the assistant send button element.
+  assistantSendButton: { border: 'none', borderRadius: '999px', background: ACCENT, color: '#fff', padding: '0.85rem 1.2rem', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'inherit' },
+  // Styles the deal wheel modal.
+=======
   assistantSendButton: { border: 'none', borderRadius: '999px', background: ACCENT_FILL, color: '#fff', padding: '0.85rem 1.2rem', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'inherit' },
+>>>>>>> mindi-managerImprovements
   wheelModal:       { background: '#fff', borderRadius: '20px', padding: '1.3rem', width: '92%', maxWidth: '420px', maxHeight: '88vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.8rem' },
+  // Styles wheel modal header.
   wheelHeader:      { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  // Styles wheel title.
   wheelTitle:       { margin: 0, color: BROWN, fontSize: '1.3rem' },
+  // Styles wheel close button.
   wheelCloseBtn:    { border: 'none', background: '#f3e6d8', color: BROWN, borderRadius: '50%', width: '2rem', height: '2rem', cursor: 'pointer', fontWeight: 'bold' },
+<<<<<<< HEAD
+  // Styles wheel spin-limit note.
+  wheelLimitNote:   { margin: 0, color: '#2d231a', fontSize: '0.86rem', fontWeight: 'bold' },
+  // Styles wheel instruction text.
+  wheelHint:        { margin: 0, color: '#2d231a', fontSize: '0.9rem' },
+  // Styles wheel coupon card.
+  wheelCouponCard:  { border: '1px solid #e8d5b7', background: '#fff8f0', borderRadius: '10px', padding: '0.55rem 0.7rem' },
+  // Styles wheel coupon heading.
+  wheelCouponTitle: { margin: 0, color: '#2d231a', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 'bold' },
+  // Styles wheel coupon text.
+=======
   wheelLimitNote:   { margin: 0, color: '#3d2914', fontSize: '0.86rem', fontWeight: 'bold' },
   wheelHint:        { margin: 0, color: '#3d2914', fontSize: '0.9rem' },
   wheelCouponCard:  { border: '1px solid #e8d5b7', background: '#fff8f0', borderRadius: '10px', padding: '0.55rem 0.7rem' },
   wheelCouponTitle: { margin: 0, color: '#321f0f', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 'bold' },
+>>>>>>> mindi-managerImprovements
   wheelCouponText:  { margin: '0.2rem 0 0', color: BROWN, fontSize: '0.92rem', fontWeight: 'bold' },
+  // Styles wheel display area.
   wheelStage:       { position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0.6rem 0 0.3rem' },
+  // Styles wheel pointer marker.
   wheelPointer:     { position: 'absolute', top: '-0.35rem', fontSize: '1.2rem', color: BROWN, zIndex: 2 },
+  // Styles spinning wheel disc.
   wheelDisc:        { width: '250px', height: '250px', borderRadius: '50%', border: `6px solid ${BROWN}`, position: 'relative', boxShadow: '0 8px 20px rgba(0,0,0,0.18)' },
+<<<<<<< HEAD
+  // Styles wheel segment labels.
+  wheelSegmentLabel: { position: 'absolute', top: '50%', left: '50%', transformOrigin: '0 0', color: BROWN, fontSize: '0.62rem', fontWeight: 'bold', width: '56px', textAlign: 'center', lineHeight: 1.1, whiteSpace: 'normal', wordBreak: 'break-word' },
+  // Styles wheel center hub.
+  wheelHub:         { position: 'absolute', width: '24px', height: '24px', borderRadius: '50%', background: BROWN, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' },
+  // Styles wheel spin button.
+  wheelSpinBtn:     { border: 'none', background: ACCENT, color: '#fff', borderRadius: '50px', padding: '0.75rem 1.2rem', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'inherit', fontSize: '1rem' },
+  // Styles coupon claim button.
+  wheelClaimBtn:    { border: 'none', background: BROWN, color: '#fff', borderRadius: '50px', padding: '0.72rem 1.2rem', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'inherit', fontSize: '0.95rem' },
+  // Styles disabled spin button.
+  wheelSpinBtnDisabled: { opacity: 0.7, cursor: 'not-allowed' },
+  // Styles fun-mode points badge.
+=======
   wheelSegmentLabel: {
     position: 'absolute',
     top: '50%',
@@ -2434,58 +3221,138 @@ const s = {
     fontFamily: 'inherit',
     fontSize: '1rem',
   },
+>>>>>>> mindi-managerImprovements
   pointsBadge:   { background: '#fff', color: BROWN, borderRadius: '50px', padding: '0.45rem 1rem', fontSize: '0.9rem', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', boxShadow: '0 2px 6px rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', transition: 'transform 0.2s ease, box-shadow 0.2s ease' },
+  // Styles the fun mode btn element.
   funModeBtn:    { width: '2.2rem', height: '2.2rem', borderRadius: '50%', border: 'none', fontSize: '1.2rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, transition: 'opacity 0.2s ease, box-shadow 0.2s ease' },
+  // Styles the fun mode btn on element.
   funModeBtnOn:  { background: '#fff', boxShadow: '0 2px 8px rgba(200,119,58,0.45)', opacity: 1 },
+<<<<<<< HEAD
+  // Styles the fun mode btn off element.
+  funModeBtnOff: { background: 'rgba(255,255,255,0.25)', boxShadow: 'none', opacity: 0.65 },
+  // Styles larger fun-mode drink emoji.
+=======
   funModeBtnOff: { background: '#fff', boxShadow: 'none', opacity: 1, border: '2px solid rgba(255,255,255,0.5)' },
+>>>>>>> mindi-managerImprovements
   drinkEmojiLarge: { fontSize: '3.8rem' },
+  // Styles fun-mode wizard modal.
   wizardBox:         { background: '#fff', borderRadius: '24px', padding: '2rem 1.5rem', width: '92%', maxWidth: '420px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' },
+  // Styles wizard close button.
   wizardCloseBtn:    { position: 'absolute', top: '0.85rem', left: '0.85rem', background: '#f3e6d8', border: 'none', borderRadius: '50%', width: '2rem', height: '2rem', fontSize: '1rem', fontWeight: 'bold', color: BROWN, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 },
+  wizardCloseBtnRight: { left: 'auto', right: '0.85rem' },
+  customizeEditBackBtn: { position: 'absolute', top: '0.85rem', left: '0.85rem', background: '#f3e6d8', border: 'none', borderRadius: '50%', width: '2rem', height: '2rem', fontSize: '1.15rem', fontWeight: 'bold', color: BROWN, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, zIndex: 1 },
+  // Styles wizard header area.
   wizardHeader:      { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', marginBottom: '0.5rem' },
+  // Styles large wizard emoji.
   wizardBigEmoji:    { fontSize: '4.5rem', lineHeight: 1 },
+  // Styles wizard drink name.
   wizardDrinkName:   { fontSize: '1.5rem', fontWeight: 'bold', color: BROWN, textAlign: 'center', margin: 0 },
+  // Styles wizard choice summary.
   wizardSummary:     { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0.4rem', marginTop: '0.5rem' },
+  // Styles wizard summary chips.
   wizardSummaryChip: { background: '#fff4eb', border: `1.5px solid ${ACCENT}`, borderRadius: '50px', padding: '0.25rem 0.75rem', fontSize: '0.85rem', fontWeight: 'bold', color: BROWN, display: 'inline-flex', alignItems: 'center', gap: '0.25rem' },
+  // Styles wizard progress dots.
   wizardDots:        { display: 'flex', justifyContent: 'center', gap: '0.6rem', margin: '0.75rem 0' },
+  // Styles each wizard dot.
   wizardDot:         { width: '0.7rem', height: '0.7rem', borderRadius: '50%', background: '#e8d5b7', display: 'inline-block' },
+<<<<<<< HEAD
+  // Styles active wizard dot.
+  wizardDotActive:   { background: ACCENT, transform: 'scale(1.3)' },
+  // Styles wizard step content.
+=======
   wizardDotActive:   { background: ACCENT_FILL, transform: 'scale(1.3)' },
+>>>>>>> mindi-managerImprovements
   wizardStep:        { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' },
+  // Styles wizard question text.
   wizardQuestion:    { fontSize: '1.5rem', fontWeight: 'bold', color: BROWN, textAlign: 'center', margin: 0 },
+  // Styles wizard option grid.
   wizardOptions:     { display: 'flex', gap: '0.8rem', justifyContent: 'center', flexWrap: 'wrap', width: '100%' },
+  // Styles wizard option buttons.
   wizardOptBtn:      { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', border: `3px solid #e8d5b7`, background: '#fffdf9', borderRadius: '18px', padding: '1rem 0.75rem', minWidth: '90px', flex: 1, cursor: 'pointer', fontFamily: 'inherit', transition: 'border-color 0.15s ease, background 0.15s ease' },
+  // Styles active wizard option.
   wizardOptBtnActive: { border: `3px solid ${ACCENT}`, background: '#fff4eb' },
+  // Styles wizard option emoji.
   wizardOptEmoji:    { fontSize: '2.2rem', lineHeight: 1 },
+  // Styles wizard option label.
   wizardOptLabel:    { fontSize: '0.95rem', fontWeight: 'bold', color: BROWN, textAlign: 'center' },
+  // Styles wizard topping grid.
   wizardToppingGrid: { display: 'flex', flexWrap: 'wrap', gap: '0.6rem', justifyContent: 'center', width: '100%' },
+  // Styles wizard topping buttons.
   wizardToppingBtn:      { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', border: `2px solid #e8d5b7`, background: '#fffdf9', borderRadius: '14px', padding: '0.6rem 0.8rem', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.9rem', color: BROWN, minWidth: '90px' },
+  // Styles active wizard topping.
   wizardToppingBtnActive: { border: `2px solid ${ACCENT}`, background: '#fff4eb', color: BROWN },
+  // Styles wizard footer row.
   wizardFooter:      { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.75rem', marginTop: '0.5rem' },
+  // Styles wizard back button.
   wizardBackBtn:     { background: '#f3e6d8', border: 'none', borderRadius: '50px', padding: '0.6rem 1.2rem', fontSize: '0.95rem', color: BROWN, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'bold' },
+<<<<<<< HEAD
+  // Styles wizard total price.
+  wizardTotal:       { fontSize: '1.4rem', fontWeight: 'bold', color: ACCENT },
+  // Styles wizard add button.
+=======
   wizardTotal:       { fontSize: '1.4rem', fontWeight: 'bold', color: PRICE_TEXT },
+>>>>>>> mindi-managerImprovements
   wizardAddBtn:      { background: BROWN, color: '#fff', border: 'none', borderRadius: '50px', padding: '0.75rem 1.4rem', fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'bold' },
+  // Styles achievement toast panel.
   achievementToast:  { position: 'fixed', bottom: '5rem', right: '1.5rem', background: BROWN, color: '#fff', padding: '0.9rem 1.2rem', borderRadius: '18px', display: 'flex', alignItems: 'center', gap: '0.8rem', zIndex: 500, boxShadow: '0 6px 24px rgba(0,0,0,0.25)', minWidth: '200px' },
+  // Styles achievement icon.
   achievementIcon:   { fontSize: '2rem', lineHeight: 1, flexShrink: 0 },
+<<<<<<< HEAD
+  // Styles achievement label.
+  achievementLabel:  { fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.95, fontWeight: 'bold' },
+  // Styles achievement name.
+  achievementName:   { fontSize: '1.05rem', fontWeight: 'bold' },
+  // Styles achievements modal panel.
+=======
   achievementLabel:  { fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#f8fafc', fontWeight: 'bold' },
   achievementName:   { fontSize: '1.05rem', fontWeight: 'bold', color: '#ffffff' },
+>>>>>>> mindi-managerImprovements
   achievementsPanel:       { background: '#fff', borderRadius: '20px', padding: '2rem', width: '90%', maxWidth: '420px', maxHeight: '85vh', overflowY: 'auto' },
+  // Styles achievements header.
   achievementsPanelHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' },
+  // Styles achievements title.
   achievementsPanelTitle:  { fontSize: '1.4rem', fontWeight: 'bold', color: BROWN, margin: 0 },
+<<<<<<< HEAD
+  // Styles achievements progress text.
+  achievementsPanelSub:    { fontSize: '0.85rem', color: '#333', margin: '0 0 1.25rem' },
+  // Styles achievements close button.
+=======
   achievementsPanelSub:    { fontSize: '0.85rem', color: TEXT_MUTED, margin: '0 0 1.25rem' },
+>>>>>>> mindi-managerImprovements
   achievementsCloseBtn:    { border: 'none', background: '#f3e6d8', color: BROWN, borderRadius: '50%', width: '2rem', height: '2rem', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem' },
+  // Styles achievements list.
   achievementsList:        { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
+  // Styles each achievement row.
   achievementsItem:        { display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.9rem 1rem', borderRadius: '14px', border: '2px solid transparent' },
+  // Styles earned achievements.
   achievementsItemEarned:  { background: '#fff8f0', border: `2px solid ${ACCENT}` },
+<<<<<<< HEAD
+  // Styles locked achievements.
+  achievementsItemLocked:  { background: '#f5f5f5', opacity: 0.6 },
+  // Styles achievement row icon.
+=======
   achievementsItemLocked:  { background: '#ececec', border: '2px dashed #b0b0b0', opacity: 1 },
+>>>>>>> mindi-managerImprovements
   achievementsItemIcon:    { fontSize: '2rem', lineHeight: 1, flexShrink: 0 },
+  // Styles achievement text area.
   achievementsItemInfo:    { flex: 1 },
+  // Styles achievement row name.
   achievementsItemName:    { fontWeight: 'bold', color: BROWN, fontSize: '1rem' },
+<<<<<<< HEAD
+  // Styles achievement hint text.
+  achievementsItemHint:    { fontSize: '0.8rem', color: '#888', marginTop: '0.15rem' },
+  // Styles earned check badge.
+=======
   achievementsItemHint:    { fontSize: '0.8rem', color: TEXT_MUTED, marginTop: '0.15rem' },
+>>>>>>> mindi-managerImprovements
   achievementsItemBadge:   { fontSize: '1.2rem', flexShrink: 0 },
+  // Styles the controls bar wrapper.
   controlsBar: {
     background: '#f5ebe0',
     borderBottom: '1px solid #e8d5b7',
     padding: '0.55rem 1rem',
   },
+  // Styles the controls bar layout.
   controlsBarInner: {
     maxWidth: '1200px',
     margin: '0 auto',
@@ -2496,20 +3363,32 @@ const s = {
     gap: '1rem',
     boxSizing: 'border-box',
   },
+  // Groups related controls together.
   controlCluster: { display: 'flex', alignItems: 'center', gap: '0.45rem' },
+  // Styles small control labels.
   controlClusterLabel: {
     fontSize: '0.68rem',
     fontWeight: 'bold',
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
+<<<<<<< HEAD
+    color: '#2d231a',
+=======
     color: '#291a0f',
+>>>>>>> mindi-managerImprovements
     minWidth: '2.75rem',
   },
-  viewToggleGroup:  { display: 'flex', gap: '0.35rem' },
-  viewBtn:          { background: '#fff', border: '2px solid #e8d5b7', borderRadius: '8px', padding: '0.45rem 0.65rem', cursor: 'pointer', color: BROWN, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s ease, border-color 0.15s ease' },
+  // Styles the view toggle group.
+  viewToggleGroup:  { display: 'flex', gap: '0.35rem', paddingLeft: '1.5rem' },
+  // Styles each view toggle button.
+  viewBtn:          { background: '#fff', border: '2px solid #e8d5b7', borderRadius: '8px', padding: '0.75rem 0.75rem', cursor: 'pointer', color: BROWN, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s ease, border-color 0.15s ease' },
+  // Styles the active view button.
   viewBtnActive:    { background: BROWN, color: '#fff', borderColor: BROWN },
-  sizeGroup:        { display: 'flex', alignItems: 'center', gap: '0.4rem' },
-  sizeBtn:          { background: '#fff', border: '2px solid #e8d5b7', borderRadius: '8px', padding: '0.3rem 0.7rem', cursor: 'pointer', color: BROWN, fontFamily: 'inherit', transition: 'background 0.15s ease, border-color 0.15s ease', lineHeight: 1 },
+  // Styles the text-size button group.
+  sizeGroup:        { display: 'flex', alignItems: 'center', gap: '0.4rem', paddingRight: '1.5rem' },
+  // Styles each text-size button.
+  sizeBtn:          { background: '#fff', border: '2px solid #e8d5b7', borderRadius: '8px', padding: '0.75rem 0.75rem', cursor: 'pointer', color: BROWN, fontFamily: 'inherit', transition: 'background 0.15s ease, border-color 0.15s ease', lineHeight: 1 },
+  // Styles the drink list layout.
   listGrid: {
     display: 'flex',
     flexDirection: 'column',
@@ -2520,20 +3399,28 @@ const s = {
     boxSizing: 'border-box',
     scrollMarginTop: '12px',
   },
+  // Styles each drink list card.
   listCard:         { background: '#fff', border: '2px solid #e8d5b7', borderRadius: '16px', padding: '1rem 1.25rem', cursor: 'pointer', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '1rem', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(74,44,10,0.08)', textAlign: 'left', width: '100%' },
+  // Styles list-card text content.
   listCardInfo:     { display: 'flex', flexDirection: 'column', gap: '0.2rem', flex: 1, minWidth: 0 },
-
+  
+  // Styles the empty-filter message.
   emptyFilterMessage: {
     gridColumn: '1 / -1',
     width: '100%',
     textAlign: 'center',
+<<<<<<< HEAD
+    color: '#2d231a',
+=======
     color: '#291a0f',
+>>>>>>> mindi-managerImprovements
     padding: '2rem 1rem',
     margin: 0,
     fontSize: '1rem',
     lineHeight: 1.5,
     fontWeight: 'bold',
   },
+  // Styles the guide footer element.
   guideFooter: {
     marginTop: '0.5rem',
     padding: '2rem 2rem 3rem',
@@ -2544,6 +3431,7 @@ const s = {
     marginRight: 'auto',
     boxSizing: 'border-box',
   },
+  // Styles the guide title element.
   guideTitle: {
     margin: '0 0 1.25rem',
     fontSize: '1.35rem',
@@ -2551,7 +3439,9 @@ const s = {
     fontWeight: 'bold',
     letterSpacing: '0.02em',
   },
+  // Styles guide content section.
   guideSection: { marginBottom: '1.75rem' },
+  // Styles guide section title.
   guideSectionTitle: {
     margin: '0 0 0.5rem',
     fontSize: '1.05rem',
@@ -2559,13 +3449,16 @@ const s = {
     fontWeight: 'bold',
     letterSpacing: '0.04em',
   },
+  // Styles the guide lead element.
   guideLead: {
     margin: '0 0 1rem',
     fontSize: '0.95rem',
     lineHeight: 1.55,
-    color: '#4a3828',
+    color: '#2d231a',
   },
+  // Styles the guide chip row element.
   guideChipRow: { display: 'flex', flexWrap: 'wrap', gap: '0.6rem', marginBottom: '1.1rem' },
+  // Styles the guide chip element.
   guideChip: {
     border: `2px solid #e8d5b7`,
     background: '#fff',
@@ -2577,7 +3470,9 @@ const s = {
     fontFamily: 'inherit',
     fontWeight: 'bold',
   },
+  // Styles the guide chip active element.
   guideChipActive: { background: BROWN, color: '#fff', borderColor: BROWN },
+  // Styles the guide search label element.
   guideSearchLabel: {
     display: 'block',
     fontSize: '0.88rem',
@@ -2585,6 +3480,7 @@ const s = {
     color: BROWN,
     marginBottom: '0.35rem',
   },
+  // Styles the guide search input element.
   guideSearchInput: {
     width: '100%',
     maxWidth: '24rem',
@@ -2597,18 +3493,20 @@ const s = {
     color: BROWN,
     background: '#fff',
   },
+  // Styles guide bullet list.
   guideList: {
     margin: 0,
     paddingLeft: '1.25rem',
     fontSize: '0.95rem',
     lineHeight: 1.6,
-    color: '#4a3828',
+    color: '#2d231a',
   },
+  // Styles guide warning boxes.
   guideDisclaimer: {
     margin: 0,
     fontSize: '0.95rem',
     lineHeight: 1.6,
-    color: '#4a3828',
+    color: '#2d231a',
     padding: '1rem 1.15rem',
     background: '#fff',
     borderRadius: '12px',
