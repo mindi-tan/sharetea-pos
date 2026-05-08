@@ -1315,11 +1315,7 @@ useEffect(() => {
                   <span style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>
                     {weather.temp}°F
                   </span>
-<<<<<<< HEAD
-                  <span style={{ fontSize: '0.8rem', opacity: 1 }}>
-=======
                   <span style={{ fontSize: '0.8rem', color: '#fefcf8' }}>
->>>>>>> mindi-managerImprovements
                     {weather.description}
                   </span>
                 </div>
@@ -1331,7 +1327,6 @@ useEffect(() => {
               <select
                 id="language-select"
                 value={language}
-<<<<<<< HEAD
                 onChange={(e) => {
                   const lang = e.target.value;
                   if (lang === language) return;
@@ -1365,16 +1360,6 @@ useEffect(() => {
                   e.target.style.borderColor = '#e8f4f8';
                   e.target.style.backgroundColor = '#f0fafb';
                   e.target.style.boxShadow = '0 4px 12px rgba(13, 90, 111, 0.12)';
-=======
-                onChange={(e) => setLanguage(e.target.value)}
-                style={{
-                  padding: '0.4rem',
-                  borderRadius: '8px',
-                  border: `2px solid rgba(255,255,255,0.35)`,
-                  fontWeight: 'bold',
-                  background: '#fff',
-                  color: BROWN,
->>>>>>> mindi-managerImprovements
                 }}
               >
                 <option value="en">🌐 English</option>
@@ -1837,11 +1822,7 @@ useEffect(() => {
                         >
                           <span style={{ fontSize: '1.5rem' }}>🧆</span>
                           <span>{getToppingDisplayName(t)}</span>
-<<<<<<< HEAD
-                          <span style={{ fontSize: '0.8rem', opacity: 0.9 }}>+${parseFloat(t.topping_price).toFixed(2)}</span>
-=======
                           <span style={{ fontSize: '0.8rem', color: PRICE_TEXT }}>+${parseFloat(t.topping_price).toFixed(2)}</span>
->>>>>>> mindi-managerImprovements
                         </button>
                       ))}
                     </div>
@@ -2785,13 +2766,9 @@ const s = {
   statusMessage:    { margin: '0.75rem auto 0', padding: '0 1.25rem', maxWidth: '1200px', color: BROWN, fontSize: '0.95rem' },
   // Styles error messages.
   errorMessage:     { margin: '0.75rem auto 0', padding: '0 1.25rem', maxWidth: '1200px', color: '#b00020', fontSize: '0.95rem', fontWeight: 'bold' },
-<<<<<<< HEAD
   // Styles the cart button.
-  cartBtn:          { background: ACCENT, color: '#fff', border: 'none', borderRadius: '50px', padding: '0.45rem 0.95rem', fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 'bold', fontFamily: 'inherit', whiteSpace: 'nowrap' },
-  // Positions the feature menu wrapper.
-=======
   cartBtn:          { background: ACCENT_FILL, color: '#fff', border: 'none', borderRadius: '50px', padding: '0.55rem 1.15rem', fontSize: '0.95rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 'bold', fontFamily: 'inherit', whiteSpace: 'nowrap' },
->>>>>>> mindi-managerImprovements
+  // Positions the feature menu wrapper.
   featureMenuWrap:  { position: 'relative' },
   // Styles the feature menu button.
   featureMenuBtn:   { background: '#fff', color: BROWN, border: 'none', borderRadius: '50px', padding: '0.42rem 0.85rem', fontSize: '0.82rem', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontFamily: 'inherit', whiteSpace: 'nowrap' },
@@ -2799,13 +2776,9 @@ const s = {
   featureDropdown:  { position: 'absolute', top: 'calc(100% + 0.45rem)', right: 0, minWidth: '220px', background: '#fff', border: '1px solid #e8d5b7', borderRadius: '12px', boxShadow: '0 8px 20px rgba(0,0,0,0.18)', padding: '0.4rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', zIndex: 150 },
   // Styles each feature menu item.
   featureMenuItem:  { border: 'none', background: '#fff8f0', color: BROWN, borderRadius: '9px', padding: '0.6rem 0.7rem', fontSize: '0.9rem', fontWeight: 'bold', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit' },
-<<<<<<< HEAD
   // Styles the cart item count badge.
-  cartBadge:        { background: '#fff', color: ACCENT, borderRadius: '50%', padding: '0 6px', fontSize: '0.8rem', fontWeight: 'bold' },
-  // Styles the category bar section.
-=======
   cartBadge:        { background: '#fff', color: BROWN, borderRadius: '50%', padding: '0 6px', fontSize: '0.8rem', fontWeight: 'bold' },
->>>>>>> mindi-managerImprovements
+  // Styles the category bar section.
   categoryBarWrap: {
     background: LIGHT,
     borderBottom: '1px solid #e8d5b7',
@@ -2816,14 +2789,11 @@ const s = {
     maxWidth: '1200px',
     margin: '0 auto 0.45rem',
     boxSizing: 'border-box',
-<<<<<<< HEAD
-=======
     fontSize: '0.72rem',
     fontWeight: 'bold',
     textTransform: 'uppercase',
     letterSpacing: '0.14em',
     color: '#3d2914',
->>>>>>> mindi-managerImprovements
   },
   // Styles the compact controls under the category grid.
   categoryControls: {
@@ -2915,16 +2885,11 @@ const s = {
   drinkEmoji:       { fontSize: '2.5rem' },
   // Styles drink names.
   drinkName:        { fontSize: '0.95rem', fontWeight: 'bold', color: BROWN, lineHeight: 1.3 },
-<<<<<<< HEAD
   // Styles drink category text.
-  drinkCategory:    { fontSize: '0.75rem', color: '#333', textTransform: 'uppercase', letterSpacing: '0.08em' },
-  // Styles drink price text.
-  drinkPrice:       { fontSize: '1.1rem', color: ACCENT, fontWeight: 'bold', marginTop: '0.25rem' },
-  // Styles the price and speaker row.
-=======
   drinkCategory:    { fontSize: '0.75rem', color: TEXT_MUTED, textTransform: 'uppercase', letterSpacing: '0.08em' },
+  // Styles drink price text.
   drinkPrice:       { fontSize: '1.1rem', color: PRICE_TEXT, fontWeight: 'bold', marginTop: '0.25rem' },
->>>>>>> mindi-managerImprovements
+  // Styles the price and speaker row.
   drinkPriceRow: {
     display: 'flex',
     alignItems: 'center',
@@ -2961,23 +2926,15 @@ const s = {
   modalBox:         { background: '#fff', borderRadius: '20px', padding: '2rem', width: '90%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' },
   // Styles modal title text.
   modalTitle:       { fontSize: '1.4rem', fontWeight: 'bold', color: BROWN, textAlign: 'center', margin: '0.5rem 0 0.25rem' },
-<<<<<<< HEAD
   // Styles modal category text.
-  modalCategory:    { fontSize: '0.85rem', color: '#333', textAlign: 'center', marginBottom: '1.5rem', textTransform: 'uppercase', letterSpacing: '0.08em' },
-  // Styles modal form sections.
-=======
   modalCategory:    { fontSize: '0.85rem', color: TEXT_MUTED, textAlign: 'center', marginBottom: '1.5rem', textTransform: 'uppercase', letterSpacing: '0.08em' },
->>>>>>> mindi-managerImprovements
+  // Styles modal form sections.
   section:          { marginBottom: '1.25rem' },
   // Styles section labels.
   sectionLabel:     { fontWeight: 'bold', color: BROWN, marginBottom: '0.5rem', fontSize: '0.95rem' },
-<<<<<<< HEAD
   // Styles the topping note element.
-  toppingNote:      { color: '#333', fontWeight: 'normal', fontSize: '0.8rem' },
-  // Styles option button rows.
-=======
   toppingNote:      { color: TEXT_SECONDARY, fontWeight: 'normal', fontSize: '0.8rem' },
->>>>>>> mindi-managerImprovements
+  // Styles option button rows.
   optionRow:        { display: 'flex', flexWrap: 'wrap', gap: '0.5rem' },
   // Styles modal option buttons.
   optBtn:           { border: '2px solid #e8d5b7', background: '#fff', color: BROWN, borderRadius: '50px', padding: '0.4rem 0.9rem', fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'inherit' },
@@ -2987,19 +2944,13 @@ const s = {
   toppingGrid:      { display: 'flex', flexWrap: 'wrap', gap: '0.5rem' },
   // Styles each topping button.
   toppingBtn:       { border: '2px solid #e8d5b7', background: '#fff', color: BROWN, borderRadius: '50px', padding: '0.4rem 0.9rem', fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'inherit' },
-<<<<<<< HEAD
   // Styles selected topping buttons.
-  toppingBtnActive: { background: ACCENT, color: '#fff', border: `2px solid ${ACCENT}` },
+  toppingBtnActive: { background: ACCENT_FILL, color: '#fff', border: `2px solid ${ACCENT_FILL}` },
   // Styles the modal footer row.
   modalFooter:      { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #e8d5b7' },
   // Styles modal total price.
-  modalTotal:       { fontSize: '1.4rem', fontWeight: 'bold', color: ACCENT },
-  // Styles add-to-cart buttons.
-=======
-  toppingBtnActive: { background: ACCENT_FILL, color: '#fff', border: `2px solid ${ACCENT_FILL}` },
-  modalFooter:      { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #e8d5b7' },
   modalTotal:       { fontSize: '1.4rem', fontWeight: 'bold', color: PRICE_TEXT },
->>>>>>> mindi-managerImprovements
+  // Styles add-to-cart buttons.
   addBtn:           { background: BROWN, color: '#fff', border: 'none', borderRadius: '50px', padding: '0.7rem 1.8rem', fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'bold' },
   // Styles cart overlay layout.
   cartOverlayContent: { display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: '1rem', width: '100%', padding: '1rem', boxSizing: 'border-box', flexWrap: 'wrap' },
@@ -3009,15 +2960,7 @@ const s = {
   couponDrawer:     { background: '#fff', borderRadius: '20px', padding: '1.3rem', width: '90%', maxWidth: '260px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 6px 20px rgba(0,0,0,0.12)', display: 'flex', flexDirection: 'column', gap: '0.6rem' },
   // Styles coupon title.
   couponTitle:      { fontSize: '1.2rem', fontWeight: 'bold', color: BROWN, margin: 0 },
-<<<<<<< HEAD
   // Styles empty coupon text.
-  couponEmpty:      { margin: 0, color: '#2d231a', fontSize: '0.9rem', lineHeight: 1.35 },
-  // Styles cart title text.
-  cartTitle:        { fontSize: '1.4rem', fontWeight: 'bold', color: BROWN, marginBottom: '1.5rem' },
-  // Styles empty-cart text.
-  emptyCart:        { color: '#333', textAlign: 'center', padding: '2rem 0' },
-  // Styles each cart item row.
-=======
   couponEmpty:      { margin: 0, color: '#3d2914', fontSize: '0.9rem', lineHeight: 1.35 },
   cartHeader: {
     display: 'flex',
@@ -3047,50 +2990,36 @@ const s = {
     boxShadow: '0 1px 4px rgba(74,44,10,0.12)',
   },
   emptyCart:        { color: TEXT_MUTED, textAlign: 'center', padding: '2rem 0' },
->>>>>>> mindi-managerImprovements
+  // Styles each cart item row.
   cartItem:         { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '0.75rem 0', borderBottom: '1px solid #f0e0cc' },
   // Styles cart item details.
   cartItemInfo:     { flex: 1 },
   // Styles cart item name.
   cartItemName:     { fontWeight: 'bold', color: BROWN, fontSize: '0.95rem' },
-<<<<<<< HEAD
   // Styles cart item metadata.
-  cartItemMeta:     { fontSize: '0.78rem', color: '#333', marginTop: '0.25rem' },
-  cartEditBtn:      { marginTop: '0.45rem', padding: '0.25rem 0', background: 'none', border: 'none', color: ACCENT, cursor: 'pointer', fontFamily: 'inherit', fontWeight: '700', fontSize: '0.82rem', textDecoration: 'underline', textUnderlineOffset: '2px' },
-  // Styles cart item controls.
-=======
   cartItemMeta:     { fontSize: '0.78rem', color: TEXT_MUTED, marginTop: '0.25rem' },
->>>>>>> mindi-managerImprovements
+  cartEditBtn:      { marginTop: '0.45rem', padding: '0.25rem 0', background: 'none', border: 'none', color: ACCENT_FILL, cursor: 'pointer', fontFamily: 'inherit', fontWeight: '700', fontSize: '0.82rem', textDecoration: 'underline', textUnderlineOffset: '2px' },
+  // Styles cart item controls.
   cartItemRight:    { display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: '1rem' },
   // Stacks old and new prices.
   cartPriceStack:   { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: 1.2 },
-<<<<<<< HEAD
   // Styles crossed-out old price.
-  cartItemOldPrice: { color: '#3d332a', textDecoration: 'line-through', fontSize: '0.82rem' },
+  cartItemOldPrice: { color: '#5c534a', textDecoration: 'line-through', fontSize: '0.82rem' },
   // Styles cart item price.
-  cartItemPrice:    { fontWeight: 'bold', color: ACCENT },
+  cartItemPrice:    { fontWeight: 'bold', color: PRICE_TEXT },
   // Styles remove item button (subtle).
-  removeBtn:        { background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '0.9rem' },
+  removeBtn:        { background: 'none', border: 'none', color: '#5c3d2e', cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'underline' },
   // Styles close cart button (prominent).
   closeCartBtn:     { background: '#f0e6d8', border: '1px solid #d5c2a8', borderRadius: '6px', color: BROWN, cursor: 'pointer', fontSize: '0.95rem', padding: '0.35rem 0.45rem', fontWeight: '600' },
   // Styles quantity buttons.
-=======
-  cartItemOldPrice: { color: '#5c534a', textDecoration: 'line-through', fontSize: '0.82rem' },
-  cartItemPrice:    { fontWeight: 'bold', color: PRICE_TEXT },
-  removeBtn:        { background: 'none', border: 'none', color: '#5c3d2e', cursor: 'pointer', fontSize: '0.9rem', textDecoration: 'underline' },
->>>>>>> mindi-managerImprovements
   quantityBtn:      { background: '#f5f5f5', border: '1px solid #ddd', borderRadius: '4px', color: BROWN, cursor: 'pointer', fontSize: '0.9rem', width: '2rem', height: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   // Styles cart total row.
   cartTotalRow:     { display: 'flex', justifyContent: 'space-between', padding: '1rem 0', fontWeight: 'bold', fontSize: '1.1rem', color: BROWN },
   // Styles cart savings note.
   cartSavings:      { fontSize: '0.78rem', color: '#2d6a4f' },
-<<<<<<< HEAD
   // Styles cart total amount.
-  cartTotalAmt:     { color: ACCENT, fontSize: '1.2rem' },
-  // Styles claimed coupon label.
-=======
   cartTotalAmt:     { color: PRICE_TEXT, fontSize: '1.2rem' },
->>>>>>> mindi-managerImprovements
+  // Styles claimed coupon label.
   cartCouponLabel:  { fontSize: '0.88rem', fontWeight: 'bold', color: BROWN },
   // Styles coupon action group.
   cartCouponActions: { display: 'flex', gap: '0.35rem' },
@@ -3128,13 +3057,9 @@ const s = {
   assistantChatWindow: { flex: 1, minHeight: 0, overflowY: 'auto', border: '1px solid #f0e0cc', borderRadius: '18px', padding: '0.85rem', background: '#fffdf9', display: 'flex', flexDirection: 'column', gap: '0.75rem' },
   // Styles the assistant message element.
   assistantMessage: { maxWidth: '80%', padding: '0.8rem 0.95rem', borderRadius: '16px', lineHeight: 1.45, whiteSpace: 'pre-wrap' },
-<<<<<<< HEAD
   // Styles the assistant message bot element.
-  assistantMessageBot: { background: '#f3e6d8', alignSelf: 'flex-start' },
-  // Styles the assistant message user element.
-=======
   assistantMessageBot: { background: '#f3e6d8', color: BROWN, alignSelf: 'flex-start' },
->>>>>>> mindi-managerImprovements
+  // Styles the assistant message user element.
   assistantMessageUser: { background: BROWN, color: '#fff', alignSelf: 'flex-end' },
   // Styles assistant error text.
   assistantError:   { color: '#b00020', fontWeight: 'bold', margin: 0 },
@@ -3142,13 +3067,9 @@ const s = {
   assistantForm:    { display: 'flex', gap: '0.65rem' },
   // Styles assistant text input.
   assistantInput:   { flex: 1, borderRadius: '999px', border: '1px solid #d8c1a5', padding: '0.85rem 0.95rem', fontSize: '1rem', fontFamily: 'inherit' },
-<<<<<<< HEAD
   // Styles the assistant send button element.
-  assistantSendButton: { border: 'none', borderRadius: '999px', background: ACCENT, color: '#fff', padding: '0.85rem 1.2rem', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'inherit' },
-  // Styles the deal wheel modal.
-=======
   assistantSendButton: { border: 'none', borderRadius: '999px', background: ACCENT_FILL, color: '#fff', padding: '0.85rem 1.2rem', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'inherit' },
->>>>>>> mindi-managerImprovements
+  // Styles the deal wheel modal.
   wheelModal:       { background: '#fff', borderRadius: '20px', padding: '1.3rem', width: '92%', maxWidth: '420px', maxHeight: '88vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.8rem' },
   // Styles wheel modal header.
   wheelHeader:      { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
@@ -3156,22 +3077,15 @@ const s = {
   wheelTitle:       { margin: 0, color: BROWN, fontSize: '1.3rem' },
   // Styles wheel close button.
   wheelCloseBtn:    { border: 'none', background: '#f3e6d8', color: BROWN, borderRadius: '50%', width: '2rem', height: '2rem', cursor: 'pointer', fontWeight: 'bold' },
-<<<<<<< HEAD
   // Styles wheel spin-limit note.
-  wheelLimitNote:   { margin: 0, color: '#2d231a', fontSize: '0.86rem', fontWeight: 'bold' },
+  wheelLimitNote:   { margin: 0, color: '#3d2914', fontSize: '0.86rem', fontWeight: 'bold' },
   // Styles wheel instruction text.
-  wheelHint:        { margin: 0, color: '#2d231a', fontSize: '0.9rem' },
+  wheelHint:        { margin: 0, color: '#3d2914', fontSize: '0.9rem' },
   // Styles wheel coupon card.
   wheelCouponCard:  { border: '1px solid #e8d5b7', background: '#fff8f0', borderRadius: '10px', padding: '0.55rem 0.7rem' },
   // Styles wheel coupon heading.
-  wheelCouponTitle: { margin: 0, color: '#2d231a', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 'bold' },
-  // Styles wheel coupon text.
-=======
-  wheelLimitNote:   { margin: 0, color: '#3d2914', fontSize: '0.86rem', fontWeight: 'bold' },
-  wheelHint:        { margin: 0, color: '#3d2914', fontSize: '0.9rem' },
-  wheelCouponCard:  { border: '1px solid #e8d5b7', background: '#fff8f0', borderRadius: '10px', padding: '0.55rem 0.7rem' },
   wheelCouponTitle: { margin: 0, color: '#321f0f', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 'bold' },
->>>>>>> mindi-managerImprovements
+  // Styles wheel coupon text.
   wheelCouponText:  { margin: '0.2rem 0 0', color: BROWN, fontSize: '0.92rem', fontWeight: 'bold' },
   // Styles wheel display area.
   wheelStage:       { position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0.6rem 0 0.3rem' },
@@ -3179,19 +3093,7 @@ const s = {
   wheelPointer:     { position: 'absolute', top: '-0.35rem', fontSize: '1.2rem', color: BROWN, zIndex: 2 },
   // Styles spinning wheel disc.
   wheelDisc:        { width: '250px', height: '250px', borderRadius: '50%', border: `6px solid ${BROWN}`, position: 'relative', boxShadow: '0 8px 20px rgba(0,0,0,0.18)' },
-<<<<<<< HEAD
   // Styles wheel segment labels.
-  wheelSegmentLabel: { position: 'absolute', top: '50%', left: '50%', transformOrigin: '0 0', color: BROWN, fontSize: '0.62rem', fontWeight: 'bold', width: '56px', textAlign: 'center', lineHeight: 1.1, whiteSpace: 'normal', wordBreak: 'break-word' },
-  // Styles wheel center hub.
-  wheelHub:         { position: 'absolute', width: '24px', height: '24px', borderRadius: '50%', background: BROWN, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' },
-  // Styles wheel spin button.
-  wheelSpinBtn:     { border: 'none', background: ACCENT, color: '#fff', borderRadius: '50px', padding: '0.75rem 1.2rem', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'inherit', fontSize: '1rem' },
-  // Styles coupon claim button.
-  wheelClaimBtn:    { border: 'none', background: BROWN, color: '#fff', borderRadius: '50px', padding: '0.72rem 1.2rem', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'inherit', fontSize: '0.95rem' },
-  // Styles disabled spin button.
-  wheelSpinBtnDisabled: { opacity: 0.7, cursor: 'not-allowed' },
-  // Styles fun-mode points badge.
-=======
   wheelSegmentLabel: {
     position: 'absolute',
     top: '50%',
@@ -3207,9 +3109,13 @@ const s = {
     wordBreak: 'break-word',
     textShadow: '0 0 2px #ffffff, 0 0 6px #ffffff',
   },
+  // Styles wheel center hub.
   wheelHub:         { position: 'absolute', width: '24px', height: '24px', borderRadius: '50%', background: BROWN, top: '50%', left: '50%', transform: 'translate(-50%, -50%)' },
+  // Styles wheel spin button.
   wheelSpinBtn:     { border: 'none', background: ACCENT_FILL, color: '#fff', borderRadius: '50px', padding: '0.75rem 1.2rem', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'inherit', fontSize: '1rem' },
+  // Styles coupon claim button.
   wheelClaimBtn:    { border: 'none', background: BROWN, color: '#fff', borderRadius: '50px', padding: '0.72rem 1.2rem', cursor: 'pointer', fontWeight: 'bold', fontFamily: 'inherit', fontSize: '0.95rem' },
+  // Styles disabled spin button.
   wheelSpinBtnDisabled: {
     border: 'none',
     background: '#c9beb3',
@@ -3221,19 +3127,15 @@ const s = {
     fontFamily: 'inherit',
     fontSize: '1rem',
   },
->>>>>>> mindi-managerImprovements
+  // Styles fun-mode points badge.
   pointsBadge:   { background: '#fff', color: BROWN, borderRadius: '50px', padding: '0.45rem 1rem', fontSize: '0.9rem', fontWeight: 'bold', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', boxShadow: '0 2px 6px rgba(0,0,0,0.12)', border: 'none', cursor: 'pointer', transition: 'transform 0.2s ease, box-shadow 0.2s ease' },
   // Styles the fun mode btn element.
   funModeBtn:    { width: '2.2rem', height: '2.2rem', borderRadius: '50%', border: 'none', fontSize: '1.2rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, transition: 'opacity 0.2s ease, box-shadow 0.2s ease' },
   // Styles the fun mode btn on element.
   funModeBtnOn:  { background: '#fff', boxShadow: '0 2px 8px rgba(200,119,58,0.45)', opacity: 1 },
-<<<<<<< HEAD
   // Styles the fun mode btn off element.
-  funModeBtnOff: { background: 'rgba(255,255,255,0.25)', boxShadow: 'none', opacity: 0.65 },
-  // Styles larger fun-mode drink emoji.
-=======
   funModeBtnOff: { background: '#fff', boxShadow: 'none', opacity: 1, border: '2px solid rgba(255,255,255,0.5)' },
->>>>>>> mindi-managerImprovements
+  // Styles larger fun-mode drink emoji.
   drinkEmojiLarge: { fontSize: '3.8rem' },
   // Styles fun-mode wizard modal.
   wizardBox:         { background: '#fff', borderRadius: '24px', padding: '2rem 1.5rem', width: '92%', maxWidth: '420px', maxHeight: '90vh', overflowY: 'auto', position: 'relative' },
@@ -3255,13 +3157,9 @@ const s = {
   wizardDots:        { display: 'flex', justifyContent: 'center', gap: '0.6rem', margin: '0.75rem 0' },
   // Styles each wizard dot.
   wizardDot:         { width: '0.7rem', height: '0.7rem', borderRadius: '50%', background: '#e8d5b7', display: 'inline-block' },
-<<<<<<< HEAD
   // Styles active wizard dot.
-  wizardDotActive:   { background: ACCENT, transform: 'scale(1.3)' },
-  // Styles wizard step content.
-=======
   wizardDotActive:   { background: ACCENT_FILL, transform: 'scale(1.3)' },
->>>>>>> mindi-managerImprovements
+  // Styles wizard step content.
   wizardStep:        { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' },
   // Styles wizard question text.
   wizardQuestion:    { fontSize: '1.5rem', fontWeight: 'bold', color: BROWN, textAlign: 'center', margin: 0 },
@@ -3285,40 +3183,27 @@ const s = {
   wizardFooter:      { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '0.75rem', marginTop: '0.5rem' },
   // Styles wizard back button.
   wizardBackBtn:     { background: '#f3e6d8', border: 'none', borderRadius: '50px', padding: '0.6rem 1.2rem', fontSize: '0.95rem', color: BROWN, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'bold' },
-<<<<<<< HEAD
   // Styles wizard total price.
-  wizardTotal:       { fontSize: '1.4rem', fontWeight: 'bold', color: ACCENT },
-  // Styles wizard add button.
-=======
   wizardTotal:       { fontSize: '1.4rem', fontWeight: 'bold', color: PRICE_TEXT },
->>>>>>> mindi-managerImprovements
+  // Styles wizard add button.
   wizardAddBtn:      { background: BROWN, color: '#fff', border: 'none', borderRadius: '50px', padding: '0.75rem 1.4rem', fontSize: '1rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 'bold' },
   // Styles achievement toast panel.
   achievementToast:  { position: 'fixed', bottom: '5rem', right: '1.5rem', background: BROWN, color: '#fff', padding: '0.9rem 1.2rem', borderRadius: '18px', display: 'flex', alignItems: 'center', gap: '0.8rem', zIndex: 500, boxShadow: '0 6px 24px rgba(0,0,0,0.25)', minWidth: '200px' },
   // Styles achievement icon.
   achievementIcon:   { fontSize: '2rem', lineHeight: 1, flexShrink: 0 },
-<<<<<<< HEAD
   // Styles achievement label.
-  achievementLabel:  { fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.95, fontWeight: 'bold' },
-  // Styles achievement name.
-  achievementName:   { fontSize: '1.05rem', fontWeight: 'bold' },
-  // Styles achievements modal panel.
-=======
   achievementLabel:  { fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#f8fafc', fontWeight: 'bold' },
+  // Styles achievement name.
   achievementName:   { fontSize: '1.05rem', fontWeight: 'bold', color: '#ffffff' },
->>>>>>> mindi-managerImprovements
+  // Styles achievements modal panel.
   achievementsPanel:       { background: '#fff', borderRadius: '20px', padding: '2rem', width: '90%', maxWidth: '420px', maxHeight: '85vh', overflowY: 'auto' },
   // Styles achievements header.
   achievementsPanelHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' },
   // Styles achievements title.
   achievementsPanelTitle:  { fontSize: '1.4rem', fontWeight: 'bold', color: BROWN, margin: 0 },
-<<<<<<< HEAD
   // Styles achievements progress text.
-  achievementsPanelSub:    { fontSize: '0.85rem', color: '#333', margin: '0 0 1.25rem' },
-  // Styles achievements close button.
-=======
   achievementsPanelSub:    { fontSize: '0.85rem', color: TEXT_MUTED, margin: '0 0 1.25rem' },
->>>>>>> mindi-managerImprovements
+  // Styles achievements close button.
   achievementsCloseBtn:    { border: 'none', background: '#f3e6d8', color: BROWN, borderRadius: '50%', width: '2rem', height: '2rem', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem' },
   // Styles achievements list.
   achievementsList:        { display: 'flex', flexDirection: 'column', gap: '0.75rem' },
@@ -3326,25 +3211,17 @@ const s = {
   achievementsItem:        { display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.9rem 1rem', borderRadius: '14px', border: '2px solid transparent' },
   // Styles earned achievements.
   achievementsItemEarned:  { background: '#fff8f0', border: `2px solid ${ACCENT}` },
-<<<<<<< HEAD
   // Styles locked achievements.
-  achievementsItemLocked:  { background: '#f5f5f5', opacity: 0.6 },
-  // Styles achievement row icon.
-=======
   achievementsItemLocked:  { background: '#ececec', border: '2px dashed #b0b0b0', opacity: 1 },
->>>>>>> mindi-managerImprovements
+  // Styles achievement row icon.
   achievementsItemIcon:    { fontSize: '2rem', lineHeight: 1, flexShrink: 0 },
   // Styles achievement text area.
   achievementsItemInfo:    { flex: 1 },
   // Styles achievement row name.
   achievementsItemName:    { fontWeight: 'bold', color: BROWN, fontSize: '1rem' },
-<<<<<<< HEAD
   // Styles achievement hint text.
-  achievementsItemHint:    { fontSize: '0.8rem', color: '#888', marginTop: '0.15rem' },
-  // Styles earned check badge.
-=======
   achievementsItemHint:    { fontSize: '0.8rem', color: TEXT_MUTED, marginTop: '0.15rem' },
->>>>>>> mindi-managerImprovements
+  // Styles earned check badge.
   achievementsItemBadge:   { fontSize: '1.2rem', flexShrink: 0 },
   // Styles the controls bar wrapper.
   controlsBar: {
@@ -3371,11 +3248,7 @@ const s = {
     fontWeight: 'bold',
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
-<<<<<<< HEAD
-    color: '#2d231a',
-=======
     color: '#291a0f',
->>>>>>> mindi-managerImprovements
     minWidth: '2.75rem',
   },
   // Styles the view toggle group.
@@ -3409,11 +3282,7 @@ const s = {
     gridColumn: '1 / -1',
     width: '100%',
     textAlign: 'center',
-<<<<<<< HEAD
-    color: '#2d231a',
-=======
     color: '#291a0f',
->>>>>>> mindi-managerImprovements
     padding: '2rem 1rem',
     margin: 0,
     fontSize: '1rem',
